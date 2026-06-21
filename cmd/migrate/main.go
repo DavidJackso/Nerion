@@ -7,8 +7,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 
-	"go-template/internal/config"
-	"go-template/migrations"
+	"nerion/internal/config"
+	"nerion/migrations"
 )
 
 func main() {
