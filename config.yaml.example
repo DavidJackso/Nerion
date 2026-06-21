@@ -1,0 +1,13 @@
+http:
+  addr: ":8080"
+
+db:
+  dsn: ""
+
+jwt:
+  secret: ""
+  ttl: "24h"
+
+log:
+  level: "info"
+  format: "json"
