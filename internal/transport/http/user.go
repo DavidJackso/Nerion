@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	authmw "go-template/internal/middleware"
+	authmw "nerion/internal/middleware"
 )
 
 func (s *Server) userRoutes() chi.Router {
@@ -22,6 +22,15 @@ func (s *Server) userRoutes() chi.Router {
 		r.Post("/", s.createUser)
 	})
 
+	return r
+}
+
+func (s *Server) meRoutes() chi.Router {
+	r := chi.NewRouter()
+	r.Use(authmw.Auth(s.jwtManager))
+	r.Put("/", s.updateMe)
+	r.Put("/password", s.changePassword)
+	r.Delete("/", s.deleteMe)
 	return r
 }
 
@@ -65,6 +74,68 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, toUserResponse(user))
+}
+
+func (s *Server) updateMe(w http.ResponseWriter, r *http.Request) {
+	claims, _ := authmw.ClaimsFrom(r.Context())
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	var req updateMeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errBody("bad_request", "Некорректный запрос"))
+		return
+	}
+	// Keep existing values if not provided.
+	if req.Name == "" || req.Email == "" {
+		user, err := s.userService.GetUser(r.Context(), claims.UserID)
+		if err != nil {
+			s.writeError(w, r, err)
+			return
+		}
+		if req.Name == "" {
+			req.Name = user.Name
+		}
+		if req.Email == "" {
+			req.Email = user.Email
+		}
+	}
+	if err := s.userService.UpdateProfile(r.Context(), claims.UserID, req.Name, req.Email); err != nil {
+		s.writeError(w, r, err)
+		return
+	}
+	user, err := s.userService.GetUser(r.Context(), claims.UserID)
+	if err != nil {
+		s.writeError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toUserResponse(user))
+}
+
+func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
+	claims, _ := authmw.ClaimsFrom(r.Context())
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	var req changePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errBody("bad_request", "Некорректный запрос"))
+		return
+	}
+	if req.CurrentPassword == "" || req.NewPassword == "" {
+		writeJSON(w, http.StatusBadRequest, errBody("validation_error", "current_password и new_password обязательны"))
+		return
+	}
+	if err := s.authService.ChangePassword(r.Context(), claims.UserID, req.CurrentPassword, req.NewPassword); err != nil {
+		s.writeError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Пароль изменён. Все другие сессии завершены."})
+}
+
+func (s *Server) deleteMe(w http.ResponseWriter, r *http.Request) {
+	claims, _ := authmw.ClaimsFrom(r.Context())
+	if err := s.userService.DeleteAccount(r.Context(), claims.UserID); err != nil {
+		s.writeError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) getUser(w http.ResponseWriter, r *http.Request) {
