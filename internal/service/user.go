@@ -6,9 +6,9 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"go-template/internal/domain"
-	"go-template/internal/entity"
-	"go-template/pkg/apierrors"
+	"nerion/internal/domain"
+	"nerion/internal/entity"
+	"nerion/pkg/apierrors"
 )
 
 type userService struct {
@@ -45,6 +45,24 @@ func (s *userService) CreateUser(ctx context.Context, name, email, password stri
 
 func (s *userService) ListUsers(ctx context.Context, limit, offset int) ([]*entity.User, error) {
 	return s.repo.List(ctx, limit, offset)
+}
+
+func (s *userService) UpdateProfile(ctx context.Context, userID int64, name, email string) error {
+	if name == "" {
+		return apierrors.NewError(400, "validation_error", "Имя не может быть пустым")
+	}
+	return s.repo.UpdateProfile(ctx, userID, name, email)
+}
+
+func (s *userService) DeleteAccount(ctx context.Context, userID int64) error {
+	last, err := s.repo.IsLastAdminAnywhere(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if last {
+		return apierrors.NewError(409, "last_admin", "Нельзя удалить аккаунт: вы единственный администратор одного из пространств")
+	}
+	return s.repo.Delete(ctx, userID)
 }
 
 func (s *userService) Login(ctx context.Context, email, password string) (*entity.User, error) {
