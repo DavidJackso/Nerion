@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"go-template/internal/jwtauth"
+	"nerion/internal/jwtauth"
 )
 
 type contextKey string
