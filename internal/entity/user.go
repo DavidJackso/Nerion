@@ -8,9 +8,10 @@ const (
 )
 
 type User struct {
-	ID           int64
-	Name         string
-	Email        string
-	Role         Role
-	PasswordHash string
+	ID            int64
+	Name          string
+	Email         string
+	Role          Role
+	PasswordHash  string
+	EmailVerified bool
 }
