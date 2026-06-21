@@ -9,9 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"go-template/internal/app"
-	"go-template/internal/config"
-	"go-template/internal/logger"
+	"nerion/internal/app"
+	"nerion/internal/config"
+	"nerion/internal/logger"
 )
 
 func main() {

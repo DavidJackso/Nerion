@@ -9,11 +9,14 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"go-template/internal/config"
-	"go-template/internal/jwtauth"
-	"go-template/internal/repository"
-	"go-template/internal/service"
-	thttp "go-template/internal/transport/http"
+	"nerion/internal/adapter/email"
+	"nerion/internal/adapter/storage"
+	"nerion/internal/config"
+	"nerion/internal/domain"
+	"nerion/internal/jwtauth"
+	"nerion/internal/repository"
+	"nerion/internal/service"
+	thttp "nerion/internal/transport/http"
 )
 
 type App struct {
@@ -39,12 +42,72 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 	}
 	jm := jwtauth.New(cfg.JWT.Secret, ttl)
 
+	// Repositories
 	userRepo := repository.NewUserRepository(pool)
+	sessionRepo := repository.NewSessionRepository(pool)
+	emailVerifRepo := repository.NewEmailVerificationRepository(pool)
+	pwdResetRepo := repository.NewPasswordResetRepository(pool)
+	spaceRepo := repository.NewSpaceRepository(pool)
+	memberRepo := repository.NewSpaceMemberRepository(pool)
+	tableRepo := repository.NewTableRepository(pool)
+	fieldRepo := repository.NewFieldRepository(pool)
+	recordRepo := repository.NewRecordRepository(pool)
+	apiKeyRepo := repository.NewAPIKeyRepository(pool)
+	listRepo := repository.NewListRepository(pool)
+	pdfRepo := repository.NewPDFRepository(pool)
+	auditRepo := repository.NewAuditRepository(pool)
+	ddl := repository.NewDDLExecutor(pool)
+
+	// Adapters
+	emailSender := email.New(logger)
+
+	presignTTL, err := time.ParseDuration(cfg.Storage.PresignTTL)
+	if err != nil {
+		presignTTL = time.Hour
+	}
+	var storageAdapter domain.StorageAdapter
+	if cfg.Storage.S3Bucket != "" {
+		storageAdapter, err = storage.NewS3Adapter(cfg.Storage)
+		if err != nil {
+			return nil, fmt.Errorf("storage: %w", err)
+		}
+	} else {
+		storageAdapter = storage.NewLocalAdapter(cfg.Storage.UploadDir)
+	}
+
+	// Services
 	userSvc := service.NewUserService(userRepo)
+	authSvc := service.NewAuthService(userRepo, sessionRepo, emailVerifRepo, pwdResetRepo, jm, emailSender, logger)
+	spaceSvc := service.NewSpaceService(spaceRepo, memberRepo)
+	memberSvc := service.NewSpaceMemberService(memberRepo, userRepo, emailSender, logger)
+	schemaSvc := service.NewSchemaService(spaceRepo, memberRepo, tableRepo, fieldRepo, ddl)
+	recordSvc := service.NewRecordService(spaceRepo, memberRepo, tableRepo, fieldRepo, recordRepo)
+	apiKeySvc := service.NewAPIKeyService(spaceRepo, memberRepo, apiKeyRepo)
+	listSvc := service.NewListService(spaceRepo, memberRepo, tableRepo, fieldRepo, listRepo)
+	pdfSvc := service.NewPDFService(spaceRepo, memberRepo, tableRepo, fieldRepo, recordRepo, pdfRepo, storageAdapter, cfg.Storage.UploadDir)
 
-	// example: emailSender := email.New(logger) — pass to services that need it
-
-	server := thttp.NewServer(userSvc, jm, logger)
+	server := thttp.NewServer(thttp.ServerConfig{
+		UserService:   userSvc,
+		AuthService:   authSvc,
+		SpaceService:  spaceSvc,
+		MemberService: memberSvc,
+		SchemaService: schemaSvc,
+		RecordService: recordSvc,
+		APIKeyService: apiKeySvc,
+		ListService:   listSvc,
+		PDFService:    pdfSvc,
+		Storage:       storageAdapter,
+		PresignTTL:    presignTTL,
+		SpaceRepo:     spaceRepo,
+		MemberRepo:    memberRepo,
+		TableRepo:     tableRepo,
+		FieldRepo:     fieldRepo,
+		RecordRepo:    recordRepo,
+		APIKeyRepo:    apiKeyRepo,
+		AuditRepo:     auditRepo,
+		JWTManager:    jm,
+		Logger:        logger,
+	})
 
 	return &App{cfg: cfg, pool: pool, server: server, logger: logger}, nil
 }
