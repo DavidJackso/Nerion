@@ -1,13 +1,25 @@
-http:
-  addr: ":8080"
+APP_HTTP_ADDR=:8080
 
-db:
-  dsn: ""
+APP_DB_DSN=host=localhost port=5432 user=postgres password=postgres dbname=app_db sslmode=disable
 
-jwt:
-  secret: ""
-  ttl: "24h"
+APP_JWT_SECRET=super-secret-jwt-key
+APP_JWT_TTL=24h
 
-log:
-  level: "info"
-  format: "json"
+APP_LOG_LEVEL=info
+APP_LOG_FORMAT=json
+
+APP_STORAGE_UPLOAD_DIR=./uploads
+
+APP_STORAGE_S3_ENDPOINT=https://storage.yandexcloud.net
+APP_STORAGE_S3_BUCKET=nerion-storage
+APP_STORAGE_S3_ACCESS_KEY=your-access-key
+APP_STORAGE_S3_SECRET_KEY=your-secret-key
+APP_STORAGE_S3_REGION=ru-central1
+
+APP_STORAGE_PRESIGN_TTL=1h
+
+mail:
+  api_key: "xkeysib-xxxxxxxxxxxxxxxx"
+  from: "noreply@mail.nerionapp.ru"
+  name: "Nerion App"
+  host: ""

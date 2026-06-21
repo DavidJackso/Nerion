@@ -14,6 +14,7 @@ type Config struct {
 	JWT     JWTConfig
 	Log     LogConfig
 	Storage StorageConfig
+	Brevo   BrevoConfig
 }
 
 type StorageConfig struct {
@@ -42,6 +43,13 @@ type JWTConfig struct {
 type LogConfig struct {
 	Level  string // debug, info, warn, error
 	Format string // json, text
+}
+
+type BrevoConfig struct {
+	APIKey string `mapstructure:"api_key"`
+	From   string `mapstructure:"from"`
+	Name   string `mapstructure:"name"`
+	Host   string `mapstructure:"host"`
 }
 
 func Load() (*Config, error) {
@@ -81,8 +89,13 @@ func Load() (*Config, error) {
 	if cfg.DB.DSN == "" {
 		return nil, errors.New("db.dsn is required (APP_DB_DSN)")
 	}
+
 	if cfg.JWT.Secret == "" {
 		return nil, errors.New("jwt.secret is required (APP_JWT_SECRET)")
+	}
+
+	if cfg.Brevo.APIKey == "" {
+		return nil, errors.New("brevo.api_key is required (APP_BREVO_API_KEY)")
 	}
 
 	return &cfg, nil

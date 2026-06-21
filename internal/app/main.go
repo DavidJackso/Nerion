@@ -9,7 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"nerion/internal/adapter/email"
+	"nerion/internal/adapter/brevo"
 	"nerion/internal/adapter/storage"
 	"nerion/internal/config"
 	"nerion/internal/domain"
@@ -59,7 +59,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 	ddl := repository.NewDDLExecutor(pool)
 
 	// Adapters
-	emailSender := email.New(logger)
+	emailSender := brevo.New(cfg.Brevo.APIKey, cfg.Brevo.From, cfg.Brevo.Name, cfg.Brevo.Host)
 
 	presignTTL, err := time.ParseDuration(cfg.Storage.PresignTTL)
 	if err != nil {
