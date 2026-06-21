@@ -51,8 +51,13 @@ func (s *spaceMemberService) Invite(ctx context.Context, spaceID, inviterID int6
 			return err
 		}
 		// User doesn't exist — send invitation email (stub)
-		_ = s.emailSend.Send(email, "Приглашение в Nerion",
+		err = s.emailSend.Send(email, "Приглашение в Nerion",
 			"Вас пригласили в пространство. Зарегистрируйтесь на https://app.nerion.ru")
+		if err != nil {
+			s.logger.Error("Failed to send invitation email", "email", email, "error", err)
+			return errors.New("не удалось отправить приглашение")
+		}
+
 		return nil
 	}
 
