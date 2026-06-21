@@ -3,7 +3,7 @@ package email
 import (
 	"log/slog"
 
-	"go-template/internal/domain"
+	"nerion/internal/domain"
 )
 
 type Sender struct {
