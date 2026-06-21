@@ -1,0 +1,1552 @@
+openapi: 3.0.3
+info:
+  title: Nerion API
+  version: 1.0.0
+  description: |
+    Two auth schemes:
+    - **BearerAuth** — JWT `Authorization: Bearer <token>` (internal routes)
+    - **ApiKeyAuth** — `X-Api-Key: <key>` (public `/api/*` routes)
+
+servers:
+  - url: http://localhost:8080
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:    { type: string }
+            message: { type: string }
+            fields:
+              type: object
+              additionalProperties: { type: string }
+
+    User:
+      type: object
+      properties:
+        id:             { type: integer, format: int64 }
+        name:           { type: string }
+        email:          { type: string, format: email }
+        role:           { type: string, enum: [user, admin] }
+        email_verified: { type: boolean }
+
+    TokenPair:
+      type: object
+      properties:
+        access_token:  { type: string }
+        refresh_token: { type: string }
+
+    Space:
+      type: object
+      properties:
+        id:          { type: integer, format: int64 }
+        name:        { type: string }
+        slug:        { type: string }
+        owner_id:    { type: integer, format: int64 }
+        table_count: { type: integer }
+
+    Member:
+      type: object
+      properties:
+        user_id: { type: integer, format: int64 }
+        name:    { type: string }
+        email:   { type: string, format: email }
+        role:    { type: string, enum: [admin, member] }
+
+    FieldMeta:
+      type: object
+      required: [name, slug, type]
+      properties:
+        id:                    { type: integer, format: int64 }
+        name:                  { type: string }
+        slug:                  { type: string }
+        type:
+          type: string
+          enum: [text, longtext, number, date, datetime, boolean, enum, email, phone, url, file, relation]
+        required:              { type: boolean }
+        unique:                { type: boolean }
+        default_value:         { type: string, nullable: true }
+        enum_values:           { type: array, items: { type: string } }
+        relation_table_id:     { type: integer, format: int64, nullable: true }
+        relation_cardinality:  { type: string, nullable: true }
+
+    TableMeta:
+      type: object
+      properties:
+        id:     { type: integer, format: int64 }
+        name:   { type: string }
+        slug:   { type: string }
+        fields:
+          type: array
+          items: { $ref: '#/components/schemas/FieldMeta' }
+
+    APIKey:
+      type: object
+      properties:
+        id:           { type: integer, format: int64 }
+        name:         { type: string }
+        prefix:       { type: string }
+        scope:        { type: string, enum: [read, write] }
+        status:       { type: string, enum: [active, revoked] }
+        created_at:   { type: string, format: date-time }
+        last_used_at: { type: string, format: date-time, nullable: true }
+
+    APIKeyCreated:
+      allOf:
+        - $ref: '#/components/schemas/APIKey'
+        - type: object
+          properties:
+            key: { type: string, description: Full key — shown once only }
+
+    ListFieldConfig:
+      type: object
+      properties:
+        field_slug: { type: string }
+        label:      { type: string }
+        visible:    { type: boolean }
+
+    ListSortConfig:
+      type: object
+      properties:
+        field_slug: { type: string }
+        direction:  { type: string, enum: [asc, desc] }
+
+    List:
+      type: object
+      properties:
+        id:             { type: integer, format: int64 }
+        slug:           { type: string }
+        table_slug:     { type: string }
+        field_config:   { type: array, items: { $ref: '#/components/schemas/ListFieldConfig' } }
+        filter_config:  { type: object, additionalProperties: true }
+        sort_config:    { type: array, items: { $ref: '#/components/schemas/ListSortConfig' } }
+        row_limit:      { type: integer }
+        published:      { type: boolean }
+        published_at:   { type: string, format: date-time, nullable: true }
+        unpublished_at: { type: string, format: date-time, nullable: true }
+        created_at:     { type: string, format: date-time }
+
+    PDFTemplate:
+      type: object
+      properties:
+        id:         { type: integer, format: int64 }
+        name:       { type: string }
+        space_slug: { type: string }
+        file_key:   { type: string }
+        created_at: { type: string, format: date-time }
+
+    PDFJob:
+      type: object
+      properties:
+        id:           { type: string }
+        space_slug:   { type: string }
+        template_id:  { type: integer, format: int64 }
+        status:       { type: string, enum: [pending, done, failed] }
+        output_key:   { type: string, nullable: true }
+        record_count: { type: integer }
+        created_at:   { type: string, format: date-time }
+
+    AuditEntry:
+      type: object
+      properties:
+        id:          { type: integer, format: int64 }
+        space_id:    { type: integer, format: int64, nullable: true }
+        user_id:     { type: integer, format: int64, nullable: true }
+        action:      { type: string }
+        entity_type: { type: string }
+        entity_id:   { type: string }
+        meta:        { type: object, additionalProperties: true }
+        created_at:  { type: string, format: date-time }
+
+    RecordPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { type: object, additionalProperties: true }
+        meta:
+          type: object
+          properties:
+            total:  { type: integer }
+            limit:  { type: integer }
+            offset: { type: integer }
+
+    Template:
+      type: object
+      properties:
+        id:          { type: string }
+        name:        { type: string }
+        description: { type: string }
+
+  parameters:
+    slug:
+      name: slug
+      in: path
+      required: true
+      schema: { type: string }
+      description: Space slug
+    table:
+      name: table
+      in: path
+      required: true
+      schema: { type: string }
+      description: Table slug
+    recordID:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    limit:
+      name: limit
+      in: query
+      schema: { type: integer, default: 50 }
+    offset:
+      name: offset
+      in: query
+      schema: { type: integer, default: 0 }
+    sort_by:
+      name: sort_by
+      in: query
+      schema: { type: string }
+    sort_dir:
+      name: sort_dir
+      in: query
+      schema: { type: string, enum: [asc, desc] }
+    search:
+      name: search
+      in: query
+      schema: { type: string }
+
+
+# ─────────────────────────────────────────────
+#  PATHS
+# ─────────────────────────────────────────────
+paths:
+
+  # ── Auth ──────────────────────────────────
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:     { type: string }
+                email:    { type: string, format: email }
+                password: { type: string, minLength: 8 }
+      responses:
+        '201':
+          description: Registered — verification email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:    { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Token pair
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke refresh token (logout)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        '204': { description: Logged out }
+
+  /auth/password/reset-request:
+    post:
+      tags: [Auth]
+      summary: Request password reset email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Email sent (always 200 regardless of registration)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+
+  /auth/password/reset:
+    post:
+      tags: [Auth]
+      summary: Reset password with token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token:    { type: string }
+                password: { type: string, minLength: 8 }
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /auth/verify:
+    get:
+      tags: [Auth]
+      summary: Verify email address
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  # ── Me ────────────────────────────────────
+  /me:
+    get:
+      tags: [Me]
+      summary: Get current user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+    put:
+      tags: [Me]
+      summary: Update profile (name / email)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:  { type: string }
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+    delete:
+      tags: [Me]
+      summary: Delete own account
+      responses:
+        '204': { description: Account deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /me/password:
+    put:
+      tags: [Me]
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: { type: string }
+                new_password:     { type: string, minLength: 8 }
+      responses:
+        '200':
+          description: Password changed — all other sessions terminated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ── Users (admin) ─────────────────────────
+  /users:
+    get:
+      tags: [Users]
+      summary: List all users (admin only)
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+      responses:
+        '200':
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    post:
+      tags: [Users]
+      summary: Create user (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:     { type: string }
+                email:    { type: string, format: email }
+                password: { type: string, minLength: 8 }
+      responses:
+        '201':
+          description: Created user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by ID (own or admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ── Templates ─────────────────────────────
+  /templates:
+    get:
+      tags: [Schema]
+      summary: List built-in table templates
+      responses:
+        '200':
+          description: Template catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Template' }
+
+  # ── Spaces ────────────────────────────────
+  /spaces:
+    get:
+      tags: [Spaces]
+      summary: List spaces for current user
+      responses:
+        '200':
+          description: Space list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Space' }
+
+    post:
+      tags: [Spaces]
+      summary: Create space
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name: { type: string }
+                slug: { type: string, pattern: '^[a-z0-9-]+$' }
+      responses:
+        '201':
+          description: Created space
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Space' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /spaces/{slug}:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+
+    get:
+      tags: [Spaces]
+      summary: Get space
+      responses:
+        '200':
+          description: Space
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Space' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    put:
+      tags: [Spaces]
+      summary: Rename space
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        '200':
+          description: Renamed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+
+    delete:
+      tags: [Spaces]
+      summary: Delete space (requires confirmation)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm_name]
+              properties:
+                confirm_name: { type: string, description: Must match space name exactly }
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /spaces/{slug}/settings:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    put:
+      tags: [Spaces]
+      summary: Update space settings (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+      responses:
+        '200':
+          description: Updated space
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Space' }
+
+  /spaces/{slug}/api/status:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    get:
+      tags: [Spaces]
+      summary: Public API status for space
+      responses:
+        '200':
+          description: API status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:      { type: string, enum: [online, offline, setup] }
+                  base_url:    { type: string }
+                  active_keys: { type: integer }
+                  tables:
+                    type: array
+                    items: { type: string }
+
+  # ── Members ───────────────────────────────
+  /spaces/{slug}/members:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    get:
+      tags: [Members]
+      summary: List space members
+      responses:
+        '200':
+          description: Member list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Member' }
+
+  /spaces/{slug}/members/invite:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    post:
+      tags: [Members]
+      summary: Invite member by email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /spaces/{slug}/members/{userID}/role:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+      - name: userID
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    put:
+      tags: [Members]
+      summary: Change member role (space admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { type: string, enum: [admin, member] }
+      responses:
+        '200':
+          description: Role changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /spaces/{slug}/members/{userID}:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+      - name: userID
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    delete:
+      tags: [Members]
+      summary: Remove member (space admin only)
+      responses:
+        '204': { description: Removed }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ── API Keys ──────────────────────────────
+  /spaces/{slug}/api-keys:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    get:
+      tags: [API Keys]
+      summary: List API keys (space admin)
+      responses:
+        '200':
+          description: Key list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/APIKey' }
+
+    post:
+      tags: [API Keys]
+      summary: Create API key (space admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, scope]
+              properties:
+                name:  { type: string }
+                scope: { type: string, enum: [read, write] }
+      responses:
+        '201':
+          description: Created key — full key shown once
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/APIKeyCreated' }
+
+  /spaces/{slug}/api-keys/{id}:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    delete:
+      tags: [API Keys]
+      summary: Revoke API key (space admin)
+      responses:
+        '204': { description: Revoked }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ── Schema ────────────────────────────────
+  /spaces/{slug}/tables:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    get:
+      tags: [Schema]
+      summary: List tables in space
+      responses:
+        '200':
+          description: Table list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TableMeta' }
+
+    post:
+      tags: [Schema]
+      summary: Create table
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name:        { type: string }
+                slug:        { type: string, pattern: '^[a-z0-9_]+$' }
+                template_id: { type: string, description: Optional built-in template ID }
+      responses:
+        '201':
+          description: Created table
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TableMeta' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /spaces/{slug}/tables/{table}:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+      - $ref: '#/components/parameters/table'
+    get:
+      tags: [Schema]
+      summary: Get table with fields
+      responses:
+        '200':
+          description: Table
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TableMeta' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    delete:
+      tags: [Schema]
+      summary: Delete table and all its data
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /spaces/{slug}/tables/{table}/fields:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+      - $ref: '#/components/parameters/table'
+    put:
+      tags: [Schema]
+      summary: Replace all fields (full update)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fields]
+              properties:
+                fields:
+                  type: array
+                  items: { $ref: '#/components/schemas/FieldMeta' }
+      responses:
+        '200':
+          description: Fields updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+
+  # ── Records ───────────────────────────────
+  /spaces/{slug}/tables/{table}/records:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+      - $ref: '#/components/parameters/table'
+    get:
+      tags: [Records]
+      summary: List records
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/sort_by'
+        - $ref: '#/components/parameters/sort_dir'
+        - $ref: '#/components/parameters/search'
+      responses:
+        '200':
+          description: Paginated records
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordPage' }
+
+    post:
+      tags: [Records]
+      summary: Create record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Key-value map of field_slug → value
+      responses:
+        '201':
+          description: Created record
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  /spaces/{slug}/tables/{table}/records/{id}:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+      - $ref: '#/components/parameters/table'
+      - $ref: '#/components/parameters/recordID'
+    get:
+      tags: [Records]
+      summary: Get record by ID
+      responses:
+        '200':
+          description: Record
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    put:
+      tags: [Records]
+      summary: Update record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated record
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+    delete:
+      tags: [Records]
+      summary: Delete record
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ── Lists ─────────────────────────────────
+  /spaces/{slug}/lists:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    get:
+      tags: [Lists]
+      summary: List shareable views
+      responses:
+        '200':
+          description: Lists
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/List' }
+
+    post:
+      tags: [Lists]
+      summary: Create list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, table_slug]
+              properties:
+                slug:          { type: string }
+                table_slug:    { type: string }
+                field_config:
+                  type: array
+                  items: { $ref: '#/components/schemas/ListFieldConfig' }
+                filter_config:
+                  type: object
+                  additionalProperties: true
+                sort_config:
+                  type: array
+                  items: { $ref: '#/components/schemas/ListSortConfig' }
+                row_limit:  { type: integer }
+                published:  { type: boolean }
+      responses:
+        '201':
+          description: Created list
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/List' }
+
+  /spaces/{slug}/lists/{listSlug}:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+      - name: listSlug
+        in: path
+        required: true
+        schema: { type: string }
+    put:
+      tags: [Lists]
+      summary: Update list config / publish state
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                field_config:
+                  type: array
+                  items: { $ref: '#/components/schemas/ListFieldConfig' }
+                filter_config:
+                  type: object
+                  additionalProperties: true
+                sort_config:
+                  type: array
+                  items: { $ref: '#/components/schemas/ListSortConfig' }
+                row_limit:  { type: integer, nullable: true }
+                published:  { type: boolean, nullable: true }
+      responses:
+        '200':
+          description: Updated list
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/List' }
+
+  # ── Public list (no auth) ─────────────────
+  /lists/{space}/{listSlug}:
+    parameters:
+      - name: space
+        in: path
+        required: true
+        schema: { type: string }
+      - name: listSlug
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Public]
+      summary: Fetch published list data (no auth)
+      security: []
+      responses:
+        '200':
+          description: Records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ── PDF ───────────────────────────────────
+  /spaces/{slug}/pdf/templates:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    get:
+      tags: [PDF]
+      summary: List PDF templates
+      responses:
+        '200':
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PDFTemplate' }
+
+    post:
+      tags: [PDF]
+      summary: Upload PDF template (multipart)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, file]
+              properties:
+                name: { type: string }
+                file:
+                  type: string
+                  format: binary
+                  description: PDF file (max 20 MB)
+      responses:
+        '201':
+          description: Created template
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PDFTemplate' }
+
+  /spaces/{slug}/pdf/templates/{id}/mapping:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    put:
+      tags: [PDF]
+      summary: Save field mappings for template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mappings]
+              properties:
+                mappings:
+                  type: array
+                  items:
+                    type: object
+                    required: [placeholder]
+                    properties:
+                      placeholder:     { type: string }
+                      source_field_id: { type: integer, format: int64, nullable: true }
+                      expression:      { type: string, nullable: true }
+      responses:
+        '200':
+          description: Mapping saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+
+  /spaces/{slug}/pdf/templates/{id}/preview:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    post:
+      tags: [PDF]
+      summary: Preview filled PDF for one record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [record_id, table_slug]
+              properties:
+                record_id:  { type: integer, format: int64 }
+                table_slug: { type: string }
+      responses:
+        '200':
+          description: Preview result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  /spaces/{slug}/pdf/generate:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    post:
+      tags: [PDF]
+      summary: Generate PDF job for multiple records
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [template_id, table_slug, record_ids]
+              properties:
+                template_id: { type: integer, format: int64 }
+                table_slug:  { type: string }
+                record_ids:
+                  type: array
+                  items: { type: integer, format: int64 }
+      responses:
+        '201':
+          description: Job created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PDFJob' }
+
+  /spaces/{slug}/pdf/jobs/{jobID}:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+      - name: jobID
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [PDF]
+      summary: Poll PDF job status
+      responses:
+        '200':
+          description: Job
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PDFJob' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /spaces/{slug}/pdf/archive:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    get:
+      tags: [PDF]
+      summary: List completed PDF jobs
+      responses:
+        '200':
+          description: Job list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PDFJob' }
+
+  # ── Files ─────────────────────────────────
+  /spaces/{slug}/files/upload:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    post:
+      tags: [Files]
+      summary: Upload file (max 50 MB)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:          { type: string }
+                  url:          { type: string }
+                  content_type: { type: string }
+                  size:         { type: integer }
+                  expires_at:   { type: string, format: date-time }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '413': { description: File too large }
+
+  /spaces/{slug}/files/presign:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    get:
+      tags: [Files]
+      summary: Get presigned download URL for existing file key
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema: { type: string }
+          description: Storage key (must belong to this space)
+      responses:
+        '200':
+          description: Presigned URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:        { type: string }
+                  url:        { type: string }
+                  expires_at: { type: string, format: date-time }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ── Audit ─────────────────────────────────
+  /spaces/{slug}/audit:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    get:
+      tags: [Audit]
+      summary: List audit log (space admin only)
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+      responses:
+        '200':
+          description: Audit entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AuditEntry' }
+                  meta:
+                    type: object
+                    properties:
+                      limit:  { type: integer }
+                      offset: { type: integer }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /spaces/{slug}/audit/metrics:
+    parameters:
+      - $ref: '#/components/parameters/slug'
+    get:
+      tags: [Audit]
+      summary: Audit metrics (space admin only)
+      responses:
+        '200':
+          description: Metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api_key_requests: { type: object, additionalProperties: true }
+                  pdf_jobs:         { type: object, additionalProperties: true }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ── Public API (X-Api-Key) ────────────────
+  /api/{space}/openapi.json:
+    parameters:
+      - name: space
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Public API]
+      summary: Auto-generated OpenAPI spec for space tables
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: OpenAPI 3.0 spec
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  /api/{space}/{table}:
+    parameters:
+      - name: space
+        in: path
+        required: true
+        schema: { type: string }
+      - name: table
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Public API]
+      summary: List records via API key
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/sort_by'
+        - $ref: '#/components/parameters/sort_dir'
+        - $ref: '#/components/parameters/search'
+      responses:
+        '200':
+          description: Paginated records
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+    post:
+      tags: [Public API]
+      summary: Create record via API key (write scope required)
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Created record
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/{space}/{table}/{id}:
+    parameters:
+      - name: space
+        in: path
+        required: true
+        schema: { type: string }
+      - name: table
+        in: path
+        required: true
+        schema: { type: string }
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    get:
+      tags: [Public API]
+      summary: Get record by ID via API key
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Record
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    put:
+      tags: [Public API]
+      summary: Update record via API key (write scope required)
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated record
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    delete:
+      tags: [Public API]
+      summary: Delete record via API key (write scope required)
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '204': { description: Deleted }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+
+# ─────────────────────────────────────────────
+#  Reusable responses
+# ─────────────────────────────────────────────
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Conflict (duplicate slug / email)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+tags:
+  - name: Auth
+    description: Registration, login, token management
+  - name: Me
+    description: Current user profile
+  - name: Users
+    description: User management (admin)
+  - name: Spaces
+    description: Workspace management
+  - name: Members
+    description: Space membership
+  - name: API Keys
+    description: Public API key management
+  - name: Schema
+    description: Tables and fields
+  - name: Records
+    description: Record CRUD (JWT auth)
+  - name: Lists
+    description: Shareable public views
+  - name: PDF
+    description: PDF template and generation pipeline
+  - name: Files
+    description: File upload and presigned URLs
+  - name: Audit
+    description: Audit log
+  - name: Public
+    description: Unauthenticated public endpoints
+  - name: Public API
+    description: REST CRUD via API key (X-Api-Key)
