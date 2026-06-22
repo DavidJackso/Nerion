@@ -78,7 +78,7 @@ jobs:
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
             "cd /opt/nerion && \
-             NERION_IMAGE='$IMAGE' docker compose pull && \
-             NERION_IMAGE='$IMAGE' docker compose --profile migrate run --rm migrate && \
-             NERION_IMAGE='$IMAGE' docker compose up -d --remove-orphans app && \
-             docker compose ps"
+             NERION_IMAGE='$IMAGE' docker-compose pull && \
+             NERION_IMAGE='$IMAGE' docker-compose --profile migrate run --rm migrate && \
+             NERION_IMAGE='$IMAGE' docker-compose up -d --remove-orphans app && \
+             docker-compose ps"
