@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS field_meta (
     type                 TEXT        NOT NULL,
     required             BOOLEAN     NOT NULL DEFAULT FALSE,
     default_value        TEXT,
-    unique               BOOLEAN     NOT NULL DEFAULT FALSE,
+    "unique"             BOOLEAN     NOT NULL DEFAULT FALSE,
     enum_values          TEXT[],
     relation_table_id    BIGINT      REFERENCES table_meta(id),
     relation_cardinality TEXT,
