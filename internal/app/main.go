@@ -82,15 +82,15 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 	}
 
 	// Services
-	userSvc := service.NewUserService(userRepo)
+	userSvc := service.NewUserService(userRepo, logger)
 	authSvc := service.NewAuthService(userRepo, sessionRepo, emailVerifRepo, pwdResetRepo, jm, emailSender, logger)
-	spaceSvc := service.NewSpaceService(spaceRepo, memberRepo)
+	spaceSvc := service.NewSpaceService(spaceRepo, memberRepo, logger)
 	memberSvc := service.NewSpaceMemberService(memberRepo, userRepo, emailSender, logger)
-	schemaSvc := service.NewSchemaService(spaceRepo, memberRepo, tableRepo, fieldRepo, ddl)
-	recordSvc := service.NewRecordService(spaceRepo, memberRepo, tableRepo, fieldRepo, recordRepo)
-	apiKeySvc := service.NewAPIKeyService(spaceRepo, memberRepo, apiKeyRepo)
-	listSvc := service.NewListService(spaceRepo, memberRepo, tableRepo, fieldRepo, listRepo)
-	pdfSvc := service.NewPDFService(spaceRepo, memberRepo, tableRepo, fieldRepo, recordRepo, pdfRepo, storageAdapter, cfg.Storage.UploadDir)
+	schemaSvc := service.NewSchemaService(spaceRepo, memberRepo, tableRepo, fieldRepo, ddl, logger)
+	recordSvc := service.NewRecordService(spaceRepo, memberRepo, tableRepo, fieldRepo, recordRepo, logger)
+	apiKeySvc := service.NewAPIKeyService(spaceRepo, memberRepo, apiKeyRepo, logger)
+	listSvc := service.NewListService(spaceRepo, memberRepo, tableRepo, fieldRepo, listRepo, logger)
+	pdfSvc := service.NewPDFService(spaceRepo, memberRepo, tableRepo, fieldRepo, recordRepo, pdfRepo, storageAdapter, logger, cfg.Storage.UploadDir)
 
 	server := thttp.NewServer(thttp.ServerConfig{
 		UserService:   userSvc,

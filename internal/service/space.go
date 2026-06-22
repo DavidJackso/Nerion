@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"regexp"
 
 	"nerion/internal/domain"
@@ -15,10 +16,11 @@ var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]{1,62}[a-z0-9]$`)
 type spaceService struct {
 	spaceRepo  domain.SpaceRepository
 	memberRepo domain.SpaceMemberRepository
+	logger     *slog.Logger
 }
 
-func NewSpaceService(spaceRepo domain.SpaceRepository, memberRepo domain.SpaceMemberRepository) domain.SpaceService {
-	return &spaceService{spaceRepo: spaceRepo, memberRepo: memberRepo}
+func NewSpaceService(spaceRepo domain.SpaceRepository, memberRepo domain.SpaceMemberRepository, logger *slog.Logger) domain.SpaceService {
+	return &spaceService{spaceRepo: spaceRepo, memberRepo: memberRepo, logger: logger}
 }
 
 func (s *spaceService) Create(ctx context.Context, userID int64, name, slug string) (*entity.Space, error) {
@@ -48,6 +50,7 @@ func (s *spaceService) Create(ctx context.Context, userID int64, name, slug stri
 	if err := s.memberRepo.Add(ctx, member); err != nil {
 		return nil, err
 	}
+	s.logger.Info("space created", "space", slug, "user_id", userID)
 	return space, nil
 }
 
@@ -84,7 +87,11 @@ func (s *spaceService) Rename(ctx context.Context, userID int64, slug, newName s
 	if role != entity.SpaceMemberRoleAdmin {
 		return apierrors.ErrForbidden
 	}
-	return s.spaceRepo.UpdateName(ctx, space.ID, newName)
+	if err := s.spaceRepo.UpdateName(ctx, space.ID, newName); err != nil {
+		return err
+	}
+	s.logger.Info("space renamed", "space", slug, "new_name", newName, "user_id", userID)
+	return nil
 }
 
 func (s *spaceService) Delete(ctx context.Context, userID int64, slug, confirmName string) error {
@@ -104,5 +111,9 @@ func (s *spaceService) Delete(ctx context.Context, userID int64, slug, confirmNa
 	if err := s.spaceRepo.DropSchema(ctx, slug); err != nil {
 		return err
 	}
-	return s.spaceRepo.Delete(ctx, space.ID)
+	if err := s.spaceRepo.Delete(ctx, space.ID); err != nil {
+		return err
+	}
+	s.logger.Info("space deleted", "space", slug, "user_id", userID)
+	return nil
 }

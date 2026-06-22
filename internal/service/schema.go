@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log/slog"
 
 	"nerion/internal/domain"
 	"nerion/internal/entity"
@@ -15,6 +16,7 @@ type schemaService struct {
 	tableRepo  domain.TableRepository
 	fieldRepo  domain.FieldRepository
 	ddl        *repository.DDLExecutor
+	logger     *slog.Logger
 }
 
 func NewSchemaService(
@@ -23,6 +25,7 @@ func NewSchemaService(
 	tableRepo domain.TableRepository,
 	fieldRepo domain.FieldRepository,
 	ddl *repository.DDLExecutor,
+	logger *slog.Logger,
 ) domain.SchemaService {
 	return &schemaService{
 		spaceRepo:  spaceRepo,
@@ -30,6 +33,7 @@ func NewSchemaService(
 		tableRepo:  tableRepo,
 		fieldRepo:  fieldRepo,
 		ddl:        ddl,
+		logger:     logger,
 	}
 }
 
@@ -91,6 +95,7 @@ func (s *schemaService) CreateTable(ctx context.Context, spaceSlug, name, slug s
 	if err := s.ddl.CreateTable(ctx, spaceSlug, slug); err != nil {
 		return nil, err
 	}
+	s.logger.Info("table created", "space", spaceSlug, "table", slug, "user_id", userID)
 	return t, nil
 }
 
@@ -119,6 +124,8 @@ func (s *schemaService) UpdateFields(ctx context.Context, spaceSlug, tableSlug s
 		newSlugs[f.Slug] = true
 	}
 
+	var dropped, added int
+
 	// Drop columns removed from the list
 	for _, ef := range existing {
 		if !newSlugs[ef.Slug] {
@@ -128,6 +135,7 @@ func (s *schemaService) UpdateFields(ctx context.Context, spaceSlug, tableSlug s
 			if err := s.fieldRepo.Delete(ctx, ef.ID); err != nil {
 				return err
 			}
+			dropped++
 		}
 	}
 
@@ -139,11 +147,13 @@ func (s *schemaService) UpdateFields(ctx context.Context, spaceSlug, tableSlug s
 			if err := s.ddl.AddColumn(ctx, spaceSlug, tableSlug, f); err != nil {
 				return err
 			}
+			added++
 		}
 		if err := s.fieldRepo.Upsert(ctx, f); err != nil {
 			return err
 		}
 	}
+	s.logger.Info("fields updated", "space", spaceSlug, "table", tableSlug, "added", added, "dropped", dropped, "user_id", userID)
 	return nil
 }
 
@@ -159,5 +169,9 @@ func (s *schemaService) DeleteTable(ctx context.Context, spaceSlug, tableSlug st
 	if err := s.ddl.DropTable(ctx, spaceSlug, tableSlug); err != nil {
 		return err
 	}
-	return s.tableRepo.Delete(ctx, t.ID)
+	if err := s.tableRepo.Delete(ctx, t.ID); err != nil {
+		return err
+	}
+	s.logger.Info("table deleted", "space", spaceSlug, "table", tableSlug, "user_id", userID)
+	return nil
 }

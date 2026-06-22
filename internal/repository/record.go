@@ -167,6 +167,9 @@ func (r *recordRepository) Create(ctx context.Context, spaceSlug, tableSlug stri
 		if !ok || val == nil {
 			continue
 		}
+		if s, isStr := val.(string); isStr && s == "" {
+			continue
+		}
 		cols = append(cols, fmt.Sprintf("%q", f.Slug))
 		placeholders = append(placeholders, fmt.Sprintf("$%d", argN))
 		args = append(args, val)
@@ -193,6 +196,9 @@ func (r *recordRepository) Create(ctx context.Context, spaceSlug, tableSlug stri
 	defer rows.Close()
 
 	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("insert returned no rows")
 	}
 	vals, err := rows.Values()
@@ -224,6 +230,9 @@ func (r *recordRepository) Update(ctx context.Context, spaceSlug, tableSlug stri
 		if _, ok := fieldBySlug[slug]; !ok {
 			continue
 		}
+		if s, isStr := val.(string); isStr && s == "" {
+			continue
+		}
 		setClauses = append(setClauses, fmt.Sprintf("%q = $%d", slug, argN))
 		args = append(args, val)
 		argN++
@@ -248,6 +257,9 @@ func (r *recordRepository) Update(ctx context.Context, spaceSlug, tableSlug stri
 	defer rows.Close()
 
 	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
 		return nil, apierrors.ErrNotFound
 	}
 	vals, err := rows.Values()
