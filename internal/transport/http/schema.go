@@ -73,8 +73,9 @@ func (s *Server) createTable(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	space, _ := authmw.SpaceFrom(r.Context())
-	s.auditForSpace(space.ID, claims.UserID, "schema.table_create", "table", table.Slug, map[string]any{"name": table.Name})
+	if space, _ := authmw.SpaceFrom(r.Context()); space != nil {
+		s.auditForSpace(space.ID, claims.UserID, "schema.table_create", "table", table.Slug, map[string]any{"name": table.Name})
+	}
 	writeJSON(w, http.StatusCreated, table)
 }
 
