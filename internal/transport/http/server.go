@@ -102,45 +102,47 @@ func NewServer(cfg ServerConfig) *Server {
 	return s
 }
 
-
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
 
 func (s *Server) registerRoutes() {
-	s.router.Mount("/auth", s.authRoutes())
-	s.router.Mount("/users", s.userRoutes())
-	s.router.Mount("/me", s.meRoutes())
-	s.router.Mount("/spaces", s.spaceRoutes())
-	s.router.Mount("/spaces/{slug}/members", s.memberRoutes())
-	s.router.Mount("/spaces/{slug}/api-keys", s.apiKeyRoutes())
-	s.router.Mount("/spaces/{slug}/lists", s.listRoutes())
-	s.router.Mount("/spaces/{slug}/pdf", s.pdfRoutes())
-	s.router.Mount("/spaces/{slug}/files", s.fileRoutes())
-	s.router.Mount("/spaces/{slug}/audit", s.auditRoutes())
-	s.router.Mount("/lists", s.publicListRoutes())
 	s.router.Mount("/api", s.publicAPIRoutes())
 
-	s.router.Group(func(r chi.Router) {
-		r.Use(authmw.Auth(s.jwtManager))
-		r.Use(authmw.LoadSpace(s.spaceRepo))
-		r.Get("/spaces/{slug}/tables", s.listTables)
-		r.Post("/spaces/{slug}/tables", s.createTable)
-		r.Get("/spaces/{slug}/tables/{table}", s.getTable)
-		r.Put("/spaces/{slug}/tables/{table}/fields", s.updateFields)
-		r.Delete("/spaces/{slug}/tables/{table}", s.deleteTable)
-		r.Get("/spaces/{slug}/tables/{table}/records", s.listRecords)
-		r.Post("/spaces/{slug}/tables/{table}/records", s.createRecord)
-		r.Get("/spaces/{slug}/tables/{table}/records/{id}", s.getRecord)
-		r.Put("/spaces/{slug}/tables/{table}/records/{id}", s.updateRecord)
-		r.Delete("/spaces/{slug}/tables/{table}/records/{id}", s.deleteRecord)
-	})
+	s.router.Route("/api/v1", func(r chi.Router) {
+		r.Mount("/auth", s.authRoutes())
+		r.Mount("/users", s.userRoutes())
+		r.Mount("/me", s.meRoutes())
+		r.Mount("/spaces", s.spaceRoutes())
+		r.Mount("/spaces/{slug}/members", s.memberRoutes())
+		r.Mount("/spaces/{slug}/api-keys", s.apiKeyRoutes())
+		r.Mount("/spaces/{slug}/lists", s.listRoutes())
+		r.Mount("/spaces/{slug}/pdf", s.pdfRoutes())
+		r.Mount("/spaces/{slug}/files", s.fileRoutes())
+		r.Mount("/spaces/{slug}/audit", s.auditRoutes())
+		r.Mount("/lists", s.publicListRoutes())
 
-	s.router.Group(func(r chi.Router) {
-		r.Use(authmw.Auth(s.jwtManager))
-		r.Get("/me", s.getMe)
-		r.Get("/templates", s.listTemplates)
-		r.Get("/spaces/{slug}/api/status", s.apiStatus)
+		r.Group(func(r chi.Router) {
+			r.Use(authmw.Auth(s.jwtManager))
+			r.Use(authmw.LoadSpace(s.spaceRepo))
+			r.Get("/spaces/{slug}/tables", s.listTables)
+			r.Post("/spaces/{slug}/tables", s.createTable)
+			r.Get("/spaces/{slug}/tables/{table}", s.getTable)
+			r.Put("/spaces/{slug}/tables/{table}/fields", s.updateFields)
+			r.Delete("/spaces/{slug}/tables/{table}", s.deleteTable)
+			r.Get("/spaces/{slug}/tables/{table}/records", s.listRecords)
+			r.Post("/spaces/{slug}/tables/{table}/records", s.createRecord)
+			r.Get("/spaces/{slug}/tables/{table}/records/{id}", s.getRecord)
+			r.Put("/spaces/{slug}/tables/{table}/records/{id}", s.updateRecord)
+			r.Delete("/spaces/{slug}/tables/{table}/records/{id}", s.deleteRecord)
+		})
+
+		r.Group(func(r chi.Router) {
+			r.Use(authmw.Auth(s.jwtManager))
+			r.Get("/me", s.getMe)
+			r.Get("/templates", s.listTemplates)
+			r.Get("/spaces/{slug}/api/status", s.apiStatus)
+		})
 	})
 }
 

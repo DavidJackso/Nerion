@@ -13,6 +13,9 @@ import (
 
 var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]{1,62}[a-z0-9]$`)
 
+// fieldSlugRe is more permissive: allows underscores, must start with a letter.
+var fieldSlugRe = regexp.MustCompile(`^[a-z][a-z0-9_\-]{1,63}$`)
+
 type spaceService struct {
 	spaceRepo  domain.SpaceRepository
 	memberRepo domain.SpaceMemberRepository

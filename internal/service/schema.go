@@ -131,9 +131,9 @@ func (s *schemaService) UpdateFields(ctx context.Context, spaceSlug, tableSlug s
 				"fields": "Каждое поле должно иметь name, slug и type",
 			})
 		}
-		if !slugRe.MatchString(f.Slug) {
+		if !fieldSlugRe.MatchString(f.Slug) {
 			return apierrors.NewValidationError(map[string]string{
-				"slug": "Slug поля: только латинские буквы, цифры и дефис (3–64 символа)",
+				"slug": "Slug поля: строчные латинские буквы, цифры, дефис или подчёркивание (2–64 символа), начало — буква",
 			})
 		}
 	}
