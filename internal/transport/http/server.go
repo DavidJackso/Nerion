@@ -100,6 +100,25 @@ func NewServer(cfg ServerConfig) *Server {
 	return s
 }
 
+func (s *Server) schemaAndRecordRoutes() chi.Router {
+	r := chi.NewRouter()
+	r.Use(authmw.Auth(s.jwtManager))
+
+	r.Get("/spaces/{slug}/tables", s.listTables)
+	r.Post("/spaces/{slug}/tables", s.createTable)
+	r.Get("/spaces/{slug}/tables/{table}", s.getTable)
+	r.Put("/spaces/{slug}/tables/{table}/fields", s.updateFields)
+	r.Delete("/spaces/{slug}/tables/{table}", s.deleteTable)
+
+	r.Get("/spaces/{slug}/tables/{table}/records", s.listRecords)
+	r.Post("/spaces/{slug}/tables/{table}/records", s.createRecord)
+	r.Get("/spaces/{slug}/tables/{table}/records/{id}", s.getRecord)
+	r.Put("/spaces/{slug}/tables/{table}/records/{id}", s.updateRecord)
+	r.Delete("/spaces/{slug}/tables/{table}/records/{id}", s.deleteRecord)
+
+	return r
+}
+
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
@@ -117,8 +136,7 @@ func (s *Server) registerRoutes() {
 	s.router.Mount("/spaces/{slug}/audit", s.auditRoutes())
 	s.router.Mount("/lists", s.publicListRoutes())
 	s.router.Mount("/api", s.publicAPIRoutes())
-	s.router.Mount("/", s.schemaRoutes())
-	s.router.Mount("/", s.recordRoutes())
+	s.router.Mount("/", s.schemaAndRecordRoutes())
 
 	s.router.Group(func(r chi.Router) {
 		r.Use(authmw.Auth(s.jwtManager))
