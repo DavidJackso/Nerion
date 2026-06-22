@@ -134,8 +134,9 @@ func (s *Server) updateFields(w http.ResponseWriter, r *http.Request) {
 		s.writeError(w, r, err)
 		return
 	}
-	space, _ := authmw.SpaceFrom(r.Context())
-	s.auditForSpace(space.ID, claims.UserID, "schema.fields_update", "table", tableSlug, map[string]any{"field_count": len(fields)})
+	if space, _ := authmw.SpaceFrom(r.Context()); space != nil {
+		s.auditForSpace(space.ID, claims.UserID, "schema.fields_update", "table", tableSlug, map[string]any{"field_count": len(fields)})
+	}
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Поля обновлены"})
 }
 
@@ -147,7 +148,8 @@ func (s *Server) deleteTable(w http.ResponseWriter, r *http.Request) {
 		s.writeError(w, r, err)
 		return
 	}
-	space, _ := authmw.SpaceFrom(r.Context())
-	s.auditForSpace(space.ID, claims.UserID, "schema.table_delete", "table", tableSlug, nil)
+	if space, _ := authmw.SpaceFrom(r.Context()); space != nil {
+		s.auditForSpace(space.ID, claims.UserID, "schema.table_delete", "table", tableSlug, nil)
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
