@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -112,9 +113,24 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 		AuditRepo:     auditRepo,
 		JWTManager:    jm,
 		Logger:        logger,
+		CORSOrigins:   parseCORSOrigins(cfg.HTTP.CORSOrigins),
 	})
 
 	return &App{cfg: cfg, pool: pool, server: server, logger: logger}, nil
+}
+
+func parseCORSOrigins(s string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if t := strings.TrimSpace(p); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 func (a *App) Run(ctx context.Context) error {
