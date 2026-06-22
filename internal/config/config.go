@@ -28,7 +28,8 @@ type StorageConfig struct {
 }
 
 type HTTPConfig struct {
-	Addr string
+	Addr         string
+	CORSOrigins  string `mapstructure:"cors_origins"` // comma-separated, e.g. "http://localhost:5173"
 }
 
 type DBConfig struct {
@@ -56,6 +57,7 @@ func Load() (*Config, error) {
 	v := viper.New()
 
 	v.SetDefault("http.addr", ":8080")
+	v.SetDefault("http.cors_origins", "")
 	v.SetDefault("db.dsn", "")
 	v.SetDefault("jwt.secret", "")
 	v.SetDefault("jwt.ttl", "24h")

@@ -61,6 +61,7 @@ type ServerConfig struct {
 	AuditRepo     domain.AuditRepository
 	JWTManager    jwtauth.Tokenizer
 	Logger        *slog.Logger
+	CORSOrigins   []string
 }
 
 func NewServer(cfg ServerConfig) *Server {
@@ -92,6 +93,7 @@ func NewServer(cfg ServerConfig) *Server {
 		chimw.RealIP,
 		authmw.RequestLogger(cfg.Logger),
 		authmw.SecurityHeaders,
+		authmw.CORS(cfg.CORSOrigins),
 		chimw.Recoverer,
 		chimw.CleanPath,
 		chimw.Timeout(8*time.Second),
