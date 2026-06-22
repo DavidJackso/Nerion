@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"nerion/internal/domain"
@@ -15,6 +16,7 @@ type listService struct {
 	tableRepo  domain.TableRepository
 	fieldRepo  domain.FieldRepository
 	listRepo   domain.ListRepository
+	logger     *slog.Logger
 }
 
 func NewListService(
@@ -23,6 +25,7 @@ func NewListService(
 	tableRepo domain.TableRepository,
 	fieldRepo domain.FieldRepository,
 	listRepo domain.ListRepository,
+	logger *slog.Logger,
 ) domain.ListService {
 	return &listService{
 		spaceRepo:  spaceRepo,
@@ -30,6 +33,7 @@ func NewListService(
 		tableRepo:  tableRepo,
 		fieldRepo:  fieldRepo,
 		listRepo:   listRepo,
+		logger:     logger,
 	}
 }
 
@@ -105,6 +109,7 @@ func (s *listService) Create(ctx context.Context, spaceSlug, tableSlug, listSlug
 	if err := s.listRepo.Create(ctx, l); err != nil {
 		return nil, err
 	}
+	s.logger.Info("list created", "space", spaceSlug, "table", tableSlug, "list", listSlug, "user_id", userID)
 	return l, nil
 }
 

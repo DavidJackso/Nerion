@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"log/slog"
 
 	"nerion/internal/domain"
 	"nerion/internal/entity"
@@ -15,17 +16,20 @@ type apiKeyService struct {
 	spaceRepo  domain.SpaceRepository
 	memberRepo domain.SpaceMemberRepository
 	keyRepo    domain.APIKeyRepository
+	logger     *slog.Logger
 }
 
 func NewAPIKeyService(
 	spaceRepo domain.SpaceRepository,
 	memberRepo domain.SpaceMemberRepository,
 	keyRepo domain.APIKeyRepository,
+	logger *slog.Logger,
 ) domain.APIKeyService {
 	return &apiKeyService{
 		spaceRepo:  spaceRepo,
 		memberRepo: memberRepo,
 		keyRepo:    keyRepo,
+		logger:     logger,
 	}
 }
 
@@ -84,6 +88,7 @@ func (s *apiKeyService) Create(ctx context.Context, spaceSlug, name, scope strin
 	if err := s.keyRepo.Create(ctx, key, hash); err != nil {
 		return nil, "", err
 	}
+	s.logger.Info("api key created", "space", spaceSlug, "name", name, "scope", scope, "user_id", userID)
 	return key, fullKey, nil
 }
 
@@ -100,5 +105,9 @@ func (s *apiKeyService) Revoke(ctx context.Context, spaceSlug string, keyID, use
 	if err != nil {
 		return err
 	}
-	return s.keyRepo.Revoke(ctx, keyID, space.ID)
+	if err := s.keyRepo.Revoke(ctx, keyID, space.ID); err != nil {
+		return err
+	}
+	s.logger.Info("api key revoked", "space", spaceSlug, "key_id", keyID, "user_id", userID)
+	return nil
 }

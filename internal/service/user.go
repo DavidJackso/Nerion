@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -12,11 +13,12 @@ import (
 )
 
 type userService struct {
-	repo domain.UserRepository
+	repo   domain.UserRepository
+	logger *slog.Logger
 }
 
-func NewUserService(repo domain.UserRepository) domain.UserService {
-	return &userService{repo: repo}
+func NewUserService(repo domain.UserRepository, logger *slog.Logger) domain.UserService {
+	return &userService{repo: repo, logger: logger}
 }
 
 func (s *userService) GetUser(ctx context.Context, id int64) (*entity.User, error) {
@@ -40,6 +42,7 @@ func (s *userService) CreateUser(ctx context.Context, name, email, password stri
 	if err := s.repo.Create(ctx, user); err != nil {
 		return nil, err
 	}
+	s.logger.Info("user registered", "email", email)
 	return user, nil
 }
 
@@ -62,7 +65,11 @@ func (s *userService) DeleteAccount(ctx context.Context, userID int64) error {
 	if last {
 		return apierrors.NewError(409, "last_admin", "Нельзя удалить аккаунт: вы единственный администратор одного из пространств")
 	}
-	return s.repo.Delete(ctx, userID)
+	if err := s.repo.Delete(ctx, userID); err != nil {
+		return err
+	}
+	s.logger.Info("account deleted", "user_id", userID)
+	return nil
 }
 
 func (s *userService) Login(ctx context.Context, email, password string) (*entity.User, error) {

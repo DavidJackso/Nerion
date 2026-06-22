@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"nerion/internal/domain"
@@ -16,6 +17,7 @@ type recordService struct {
 	tableRepo  domain.TableRepository
 	fieldRepo  domain.FieldRepository
 	recordRepo domain.RecordRepository
+	logger     *slog.Logger
 }
 
 func NewRecordService(
@@ -24,6 +26,7 @@ func NewRecordService(
 	tableRepo domain.TableRepository,
 	fieldRepo domain.FieldRepository,
 	recordRepo domain.RecordRepository,
+	logger *slog.Logger,
 ) domain.RecordService {
 	return &recordService{
 		spaceRepo:  spaceRepo,
@@ -31,6 +34,7 @@ func NewRecordService(
 		tableRepo:  tableRepo,
 		fieldRepo:  fieldRepo,
 		recordRepo: recordRepo,
+		logger:     logger,
 	}
 }
 
@@ -136,7 +140,12 @@ func (s *recordService) Create(ctx context.Context, spaceSlug, tableSlug string,
 	if err := s.validateData(ctx, spaceSlug, tableSlug, fields, data, nil); err != nil {
 		return nil, err
 	}
-	return s.recordRepo.Create(ctx, spaceSlug, tableSlug, fields, data)
+	rec, err := s.recordRepo.Create(ctx, spaceSlug, tableSlug, fields, data)
+	if err != nil {
+		return nil, err
+	}
+	s.logger.Info("record created", "space", spaceSlug, "table", tableSlug, "user_id", userID)
+	return rec, nil
 }
 
 func (s *recordService) Update(ctx context.Context, spaceSlug, tableSlug string, userID, id int64, data map[string]any) (map[string]any, error) {
@@ -155,5 +164,9 @@ func (s *recordService) Delete(ctx context.Context, spaceSlug, tableSlug string,
 	if err != nil {
 		return err
 	}
-	return s.recordRepo.Delete(ctx, spaceSlug, tableSlug, id)
+	if err := s.recordRepo.Delete(ctx, spaceSlug, tableSlug, id); err != nil {
+		return err
+	}
+	s.logger.Info("record deleted", "space", spaceSlug, "table", tableSlug, "id", id, "user_id", userID)
+	return nil
 }

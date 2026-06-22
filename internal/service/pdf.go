@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -28,6 +29,7 @@ type pdfService struct {
 	recordRepo domain.RecordRepository
 	pdfRepo    domain.PDFRepository
 	storage    domain.StorageAdapter
+	logger     *slog.Logger
 	uploadDir  string
 }
 
@@ -39,6 +41,7 @@ func NewPDFService(
 	recordRepo domain.RecordRepository,
 	pdfRepo domain.PDFRepository,
 	storage domain.StorageAdapter,
+	logger *slog.Logger,
 	uploadDir string,
 ) domain.PDFService {
 	return &pdfService{
@@ -49,6 +52,7 @@ func NewPDFService(
 		recordRepo: recordRepo,
 		pdfRepo:    pdfRepo,
 		storage:    storage,
+		logger:     logger,
 		uploadDir:  uploadDir,
 	}
 }
@@ -145,6 +149,7 @@ func (s *pdfService) UploadTemplate(ctx context.Context, spaceSlug, name string,
 	if err := s.pdfRepo.CreateTemplate(ctx, t); err != nil {
 		return nil, err
 	}
+	s.logger.Info("pdf template uploaded", "space", spaceSlug, "name", name, "placeholders", len(placeholders), "user_id", userID)
 	return t, nil
 }
 
@@ -290,6 +295,7 @@ func (s *pdfService) Generate(ctx context.Context, spaceSlug string, templateID,
 	if err := s.pdfRepo.CreateJob(ctx, job); err != nil {
 		return nil, err
 	}
+	s.logger.Info("pdf job started", "space", spaceSlug, "template_id", templateID, "records", len(recordIDs), "job_id", job.ID, "user_id", userID)
 
 	// Stub: mark done immediately.
 	// Real impl: call Python/WeasyPrint microservice, stream result here, upload to S3.
@@ -301,11 +307,15 @@ func (s *pdfService) Generate(ctx context.Context, spaceSlug string, templateID,
 	// Upload stub output to storage so the archive has a real key.
 	stubContent := []byte(fmt.Sprintf("PDF stub for job %s (%d records)", job.ID, total))
 	outputKey := fmt.Sprintf("pdf-jobs/%s/%s/output.pdf", spaceSlug, job.ID)
-	if err := s.storage.Upload(ctx, outputKey, bytes.NewReader(stubContent), int64(len(stubContent)), "application/pdf"); err == nil {
+	if err := s.storage.Upload(ctx, outputKey, bytes.NewReader(stubContent), int64(len(stubContent)), "application/pdf"); err != nil {
+		s.logger.Warn("pdf job storage upload failed", "job_id", job.ID, "err", err)
+	} else {
 		job.StoragePath = &outputKey
 	}
 
-	_ = s.pdfRepo.UpdateJob(ctx, job)
+	if err := s.pdfRepo.UpdateJob(ctx, job); err != nil {
+		s.logger.Error("pdf job update failed", "job_id", job.ID, "err", err)
+	}
 	return job, nil
 }
 
