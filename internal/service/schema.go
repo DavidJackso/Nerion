@@ -124,6 +124,20 @@ func (s *schemaService) UpdateFields(ctx context.Context, spaceSlug, tableSlug s
 		newSlugs[f.Slug] = true
 	}
 
+	// Validate all incoming fields before touching DB
+	for _, f := range fields {
+		if f.Name == "" || f.Slug == "" || f.Type == "" {
+			return apierrors.NewValidationError(map[string]string{
+				"fields": "Каждое поле должно иметь name, slug и type",
+			})
+		}
+		if !slugRe.MatchString(f.Slug) {
+			return apierrors.NewValidationError(map[string]string{
+				"slug": "Slug поля: только латинские буквы, цифры и дефис (3–64 символа)",
+			})
+		}
+	}
+
 	var dropped, added int
 
 	// Drop columns removed from the list
