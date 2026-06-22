@@ -60,13 +60,11 @@ jobs:
       - name: Add server to known hosts
         run: ssh-keyscan ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Copy compose files to server
+      - name: Copy compose file to server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p /opt/nerion/nginx"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p /opt/nerion"
           scp docker-compose.yml \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/nerion/docker-compose.yml
-          scp nginx/nerion.conf \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/nerion/nginx/nerion.conf
 
       - name: Deploy
         env:
@@ -76,5 +74,5 @@ jobs:
             "cd /opt/nerion && \
              NERION_IMAGE='$IMAGE' docker compose pull && \
              NERION_IMAGE='$IMAGE' docker compose --profile migrate run --rm migrate && \
-             NERION_IMAGE='$IMAGE' docker compose up -d --remove-orphans app nginx postgres && \
+             NERION_IMAGE='$IMAGE' docker compose up -d --remove-orphans app && \
              docker compose ps"
