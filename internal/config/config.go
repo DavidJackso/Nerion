@@ -64,6 +64,10 @@ func Load() (*Config, error) {
 	v.SetDefault("storage.upload_dir", "./uploads")
 	v.SetDefault("storage.s3_region", "ru-central1")
 	v.SetDefault("storage.presign_ttl", "1h")
+	v.SetDefault("brevo.api_key", "")
+	v.SetDefault("brevo.from", "")
+	v.SetDefault("brevo.name", "")
+	v.SetDefault("brevo.host", "")
 
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
@@ -92,6 +96,10 @@ func Load() (*Config, error) {
 
 	if cfg.JWT.Secret == "" {
 		return nil, errors.New("jwt.secret is required (APP_JWT_SECRET)")
+	}
+
+	if cfg.Brevo.APIKey == "" {
+		return nil, errors.New("brevo.api_key is required (APP_BREVO_API_KEY)")
 	}
 
 	return &cfg, nil
