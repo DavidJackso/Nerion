@@ -94,9 +94,5 @@ func Load() (*Config, error) {
 		return nil, errors.New("jwt.secret is required (APP_JWT_SECRET)")
 	}
 
-	if cfg.Brevo.APIKey == "" {
-		return nil, errors.New("brevo.api_key is required (APP_BREVO_API_KEY)")
-	}
-
 	return &cfg, nil
 }

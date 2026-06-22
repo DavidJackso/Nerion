@@ -59,7 +59,12 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 	ddl := repository.NewDDLExecutor(pool)
 
 	// Adapters
-	emailSender := brevo.New(cfg.Brevo.APIKey, cfg.Brevo.From, cfg.Brevo.Name, cfg.Brevo.Host)
+	var emailSender domain.EmailSender
+	if cfg.Brevo.APIKey != "" {
+		emailSender = brevo.New(cfg.Brevo.APIKey, cfg.Brevo.From, cfg.Brevo.Name, cfg.Brevo.Host)
+	} else {
+		emailSender = domain.NoopEmailSender{}
+	}
 
 	presignTTL, err := time.ParseDuration(cfg.Storage.PresignTTL)
 	if err != nil {
