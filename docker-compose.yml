@@ -1,0 +1,65 @@
+name: nerion
+
+services:
+  app:
+    image: ${NERION_IMAGE:-ghcr.io/change-me/nerion:latest}
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  migrate:
+    image: ${NERION_IMAGE:-ghcr.io/change-me/nerion:latest}
+    env_file:
+      - path: .env
+        required: true
+    command: ["./migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    profiles: ["migrate"]
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nerion
+      POSTGRES_USER: nerion
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nerion -d nerion"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nerion.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    depends_on:
+      - app
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+
+networks:
+  internal:
