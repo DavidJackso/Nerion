@@ -20,25 +20,25 @@ const (
 )
 
 type TableMeta struct {
-	ID        int64
-	SpaceID   int64
-	Name      string
-	Slug      string
-	CreatedAt time.Time
-	Fields    []*FieldMeta
+	ID        int64       `json:"id"`
+	SpaceID   int64       `json:"space_id"`
+	Name      string      `json:"name"`
+	Slug      string      `json:"slug"`
+	CreatedAt time.Time   `json:"created_at"`
+	Fields    []*FieldMeta `json:"fields,omitempty"`
 }
 
 type FieldMeta struct {
-	ID                  int64
-	TableID             int64
-	Name                string
-	Slug                string
-	Type                FieldType
-	Required            bool
-	DefaultValue        *string
-	Unique              bool
-	EnumValues          []string
-	RelationTableID     *int64
-	RelationCardinality *string
-	Position            int
+	ID                  int64      `json:"id"`
+	TableID             int64      `json:"table_id"`
+	Name                string     `json:"name"`
+	Slug                string     `json:"slug"`
+	Type                FieldType  `json:"type"`
+	Required            bool       `json:"required"`
+	DefaultValue        *string    `json:"default_value,omitempty"`
+	Unique              bool       `json:"unique"`
+	EnumValues          []string   `json:"enum_values,omitempty"`
+	RelationTableID     *int64     `json:"relation_table_id,omitempty"`
+	RelationCardinality *string    `json:"relation_cardinality,omitempty"`
+	Position            int        `json:"position"`
 }
