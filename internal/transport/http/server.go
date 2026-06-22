@@ -123,6 +123,7 @@ func (s *Server) registerRoutes() {
 
 	s.router.Group(func(r chi.Router) {
 		r.Use(authmw.Auth(s.jwtManager))
+		r.Use(authmw.LoadSpace(s.spaceRepo))
 		r.Get("/spaces/{slug}/tables", s.listTables)
 		r.Post("/spaces/{slug}/tables", s.createTable)
 		r.Get("/spaces/{slug}/tables/{table}", s.getTable)
