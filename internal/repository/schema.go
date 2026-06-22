@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"nerion/internal/domain"
@@ -25,10 +26,15 @@ func NewTableRepository(pool *pgxpool.Pool) domain.TableRepository {
 }
 
 func (r *tableRepository) Create(ctx context.Context, t *entity.TableMeta) error {
-	return r.pool.QueryRow(ctx,
+	err := r.pool.QueryRow(ctx,
 		`INSERT INTO table_meta (space_id, name, slug) VALUES ($1, $2, $3) RETURNING id, created_at`,
 		t.SpaceID, t.Name, t.Slug,
 	).Scan(&t.ID, &t.CreatedAt)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return apierrors.NewError(409, "conflict", "Таблица с таким slug уже существует")
+	}
+	return err
 }
 
 func (r *tableRepository) GetBySlug(ctx context.Context, spaceID int64, slug string) (*entity.TableMeta, error) {
@@ -51,7 +57,7 @@ func (r *tableRepository) ListBySpace(ctx context.Context, spaceID int64) ([]*en
 		return nil, err
 	}
 	defer rows.Close()
-	var list []*entity.TableMeta
+	list := make([]*entity.TableMeta, 0)
 	for rows.Next() {
 		t := &entity.TableMeta{}
 		if err := rows.Scan(&t.ID, &t.SpaceID, &t.Name, &t.Slug, &t.CreatedAt); err != nil {
@@ -86,7 +92,7 @@ func (r *fieldRepository) ListByTable(ctx context.Context, tableID int64) ([]*en
 		return nil, err
 	}
 	defer rows.Close()
-	var list []*entity.FieldMeta
+	list := make([]*entity.FieldMeta, 0)
 	for rows.Next() {
 		f := &entity.FieldMeta{}
 		var ftype string
