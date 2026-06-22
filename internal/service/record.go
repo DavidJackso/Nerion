@@ -4,11 +4,25 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"strings"
+	"time"
 
 	"nerion/internal/domain"
 	"nerion/internal/entity"
 	"nerion/pkg/apierrors"
+)
+
+var (
+	emailRe   = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
+	urlRe     = regexp.MustCompile(`^https?://`)
+	phoneRe   = regexp.MustCompile(`^[+\d][\d\s\-().]{4,}$`)
+	datetimeLayouts = []string{
+		time.RFC3339,
+		"2006-01-02T15:04:05",
+		"2006-01-02T15:04",
+		"2006-01-02 15:04:05",
+	}
 )
 
 type recordService struct {
@@ -98,6 +112,54 @@ func (s *recordService) validateData(ctx context.Context, spaceSlug, tableSlug s
 			}
 			if !valid {
 				fieldErrors[f.Slug] = fmt.Sprintf("Допустимые значения: %s", strings.Join(f.EnumValues, ", "))
+			}
+		case entity.FieldTypeDate:
+			strVal, ok := val.(string)
+			if !ok {
+				fieldErrors[f.Slug] = "Ожидается строка с датой"
+				continue
+			}
+			if _, err := time.Parse("2006-01-02", strVal); err != nil {
+				fieldErrors[f.Slug] = "Неверный формат даты (ожидается ГГГГ-ММ-ДД)"
+			}
+		case entity.FieldTypeDatetime:
+			strVal, ok := val.(string)
+			if !ok {
+				fieldErrors[f.Slug] = "Ожидается строка с датой и временем"
+				continue
+			}
+			valid := false
+			for _, layout := range datetimeLayouts {
+				if _, err := time.Parse(layout, strVal); err == nil {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				fieldErrors[f.Slug] = "Неверный формат даты и времени"
+			}
+		case entity.FieldTypeEmail:
+			strVal, ok := val.(string)
+			if !ok || !emailRe.MatchString(strVal) {
+				fieldErrors[f.Slug] = "Неверный формат email"
+			}
+		case entity.FieldTypeURL:
+			strVal, ok := val.(string)
+			if !ok || !urlRe.MatchString(strVal) {
+				fieldErrors[f.Slug] = "URL должен начинаться с http:// или https://"
+			}
+		case entity.FieldTypePhone:
+			strVal, ok := val.(string)
+			if !ok || !phoneRe.MatchString(strVal) {
+				fieldErrors[f.Slug] = "Неверный формат номера телефона"
+			}
+		case entity.FieldTypeFile:
+			if _, ok := val.(string); !ok {
+				fieldErrors[f.Slug] = "Ожидается строка с ключом файла"
+			}
+		case entity.FieldTypeText, entity.FieldTypeLongtext:
+			if _, ok := val.(string); !ok {
+				fieldErrors[f.Slug] = "Ожидается строковое значение"
 			}
 		}
 		if f.Unique {
