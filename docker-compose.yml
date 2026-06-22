@@ -1,5 +1,3 @@
-name: nerion
-
 services:
   app:
     image: ${NERION_IMAGE:-ghcr.io/change-me/nerion:latest}
@@ -7,13 +5,11 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     env_file:
-      - path: .env
-        required: true
+      - .env
 
   migrate:
     image: ${NERION_IMAGE:-ghcr.io/change-me/nerion:latest}
     env_file:
-      - path: .env
-        required: true
+      - .env
     command: ["./migrate"]
     profiles: ["migrate"]
