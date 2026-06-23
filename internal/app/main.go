@@ -77,8 +77,14 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 		if err != nil {
 			return nil, fmt.Errorf("storage: %w", err)
 		}
+		logger.Info("storage: using S3",
+			"endpoint", cfg.Storage.S3Endpoint,
+			"bucket", cfg.Storage.S3Bucket,
+			"region", cfg.Storage.S3Region,
+		)
 	} else {
 		storageAdapter = storage.NewLocalAdapter(cfg.Storage.UploadDir)
+		logger.Info("storage: using local", "upload_dir", cfg.Storage.UploadDir)
 	}
 
 	// Services
