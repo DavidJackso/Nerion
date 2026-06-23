@@ -1,0 +1,78 @@
+/* ── Nerion Design System — Fonts ──────────────────────────── */
+@font-face { font-family:"Manrope"; font-style:normal; font-weight:400 700; font-display:swap; src:url("https://fonts.gstatic.com/s/manrope/v15/xn7gYHE41ni1AdIRggexSg.woff2") format("woff2"); unicode-range:U+0000-024F,U+0259,U+1E00-1EFF,U+2000-206F,U+2100-218F,U+2C60-2C7F,U+0301,U+A720-A7FF; }
+@font-face { font-family:"Manrope"; font-style:normal; font-weight:400 700; font-display:swap; src:url("https://fonts.gstatic.com/s/manrope/v15/xn7gYHE41ni1AdIRggOxSg.woff2") format("woff2"); unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116; }
+@font-face { font-family:"JetBrains Mono"; font-style:normal; font-weight:400 600; font-display:swap; src:url("https://fonts.gstatic.com/s/jetbrainsmono/v20/tDbX2o-flEEny0FZhsfKu5WU4xD-IQ-PuZJJXxfpAO-Lf1OQk6OThxPA.woff2") format("woff2"); unicode-range:U+0000-024F,U+1E00-1EFF,U+2000-206F; }
+@font-face { font-family:"JetBrains Mono"; font-style:normal; font-weight:400 600; font-display:swap; src:url("https://fonts.gstatic.com/s/jetbrainsmono/v20/tDbX2o-flEEny0FZhsfKu5WU4xD-IQ-PuZJJXxfpAO6Lf1OQk6OThxPA.woff2") format("woff2"); unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116; }
+
+/* ── Color Tokens ──────────────────────────────────────────── */
+:root {
+  --purple-50:#F4F3FB; --purple-100:#E6E4F6; --purple-200:#C8C4ED; --purple-300:#A39DDF;
+  --purple-400:#7F77DD; --purple-500:#6960CC; --purple-600:#534AB7; --purple-700:#3F389A;
+  --purple-800:#2D2877; --purple-900:#1B1850;
+  --neutral-0:#FFFFFF; --neutral-50:#FAFAF9; --neutral-100:#F4F3F4; --neutral-150:#ECEBED;
+  --neutral-200:#E2E0E5; --neutral-300:#CECCD3; --neutral-400:#A8A5B0; --neutral-500:#7C7A85;
+  --neutral-600:#57555E; --neutral-700:#3D3B44; --neutral-800:#26242B; --neutral-900:#161519; --neutral-950:#0E0D11;
+  --green-50:#ECFDF5; --green-100:#D1FAE5; --green-500:#10A37F; --green-600:#057857; --green-700:#035E45;
+  --amber-50:#FFFBEB; --amber-100:#FEF3C7; --amber-500:#D97706; --amber-600:#B45309; --amber-700:#92400E;
+  --red-50:#FEF2F2; --red-100:#FEE2E2; --red-500:#DC2626; --red-600:#B91C1C; --red-700:#991B1B;
+  --blue-50:#EFF6FF; --blue-500:#2563EB; --blue-600:#1D4ED8;
+  --font-sans:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-mono:"JetBrains Mono","SF Mono",Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  --shadow-1:0 1px 2px rgba(20,14,58,.04);
+  --shadow-2:0 4px 12px rgba(20,14,58,.06),0 1px 2px rgba(20,14,58,.04);
+  --shadow-3:0 12px 32px rgba(20,14,58,.12),0 2px 6px rgba(20,14,58,.06);
+  --ring-focus:0 0 0 3px var(--purple-200);
+
+  /* Semantic */
+  --bg-0:var(--neutral-0); --bg-1:var(--neutral-50); --bg-2:var(--neutral-100); --bg-3:var(--neutral-150);
+  --fg-1:var(--neutral-900); --fg-2:var(--neutral-600); --fg-3:var(--neutral-500); --fg-mute:var(--neutral-400);
+  --border-default:var(--neutral-200); --border-strong:var(--neutral-300); --border-focus:var(--purple-400);
+  --brand-primary:var(--purple-400); --brand-primary-hover:var(--purple-600); --brand-primary-active:var(--purple-700);
+  --brand-tint:var(--purple-50); --brand-tint-strong:var(--purple-100);
+  --success-fg:var(--green-700); --success-bg:var(--green-50); --success-solid:var(--green-500); --success-border:var(--green-100);
+  --warning-fg:var(--amber-700); --warning-bg:var(--amber-50); --warning-solid:var(--amber-500); --warning-border:var(--amber-100);
+  --danger-fg:var(--red-700); --danger-bg:var(--red-50); --danger-solid:var(--red-500); --danger-border:var(--red-100);
+  --info-fg:var(--blue-600); --info-bg:var(--blue-50); --info-solid:var(--blue-500);
+  --overlay:rgba(20,14,58,.4);
+}
+
+/* ── Reset & Base ──────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #app { margin: 0; padding: 0; height: 100%; }
+html { color-scheme: light; }
+body {
+  font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+  color: var(--fg-1); background: var(--bg-1);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+button { font-family: inherit; }
+input, select, textarea { font-family: inherit; box-sizing: border-box; }
+h1,h2,h3,h4,h5,h6 { margin: 0; font-family: var(--font-sans); color: var(--fg-1); line-height: 1.2; font-weight: 600; }
+p { margin: 0; text-wrap: pretty; }
+a { color: var(--brand-primary); text-decoration: none; }
+code, kbd, pre { font-family: var(--font-mono); font-size: 0.92em; }
+code { background: var(--bg-2); padding: 1px 5px; border-radius: 4px; }
+::selection { background: var(--brand-tint-strong); color: var(--fg-1); }
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--neutral-200); border-radius: 4px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--neutral-300); border: 2px solid transparent; background-clip: padding-box; }
+
+/* ── Data table ────────────────────────────────────────────── */
+table.dt { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.dt thead th { text-align: left; font-weight: 600; font-size: 10px; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.07em; padding: 8px 12px; border-bottom: 0.5px solid var(--border-default); background: var(--bg-1); white-space: nowrap; }
+table.dt tbody td { padding: 9px 12px; border-bottom: 0.5px solid var(--border-default); vertical-align: middle; }
+table.dt tbody tr:hover td { background: var(--bg-1); }
+table.dt tbody tr:last-child td { border-bottom: 0; }
+table.dt th.sortable { cursor: pointer; user-select: none; transition: color 100ms; }
+table.dt th.sortable:hover { color: var(--fg-1); }
+
+/* ── Keyframes ─────────────────────────────────────────────── */
+@keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:200px 0} }
+@keyframes spin { to{transform:rotate(360deg)} }
+@keyframes modalFade { from{opacity:0} to{opacity:1} }
+@keyframes modalIn { from{transform:translateY(8px) scale(.98)} to{transform:translateY(0) scale(1)} }
+@keyframes toastIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
+@keyframes slideUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }

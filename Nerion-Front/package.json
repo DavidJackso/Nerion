@@ -1,0 +1,21 @@
+{
+  "name": "nerion",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "nuxt": "^3.13.0",
+    "@pinia/nuxt": "^0.9.0",
+    "pinia": "^2.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vue-tsc": "^2.1.0"
+  }
+}
