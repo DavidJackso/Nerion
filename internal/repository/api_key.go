@@ -32,7 +32,7 @@ func (r *apiKeyRepository) Create(ctx context.Context, key *entity.APIKey, keyHa
 func (r *apiKeyRepository) ListBySpace(ctx context.Context, spaceID int64) ([]*entity.APIKey, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, space_id, name, key_prefix, scope, created_at, last_used_at, revoked_at
-		FROM api_keys WHERE space_id = $1 ORDER BY created_at DESC`, spaceID)
+		FROM api_keys WHERE space_id = $1 AND revoked_at IS NULL ORDER BY created_at DESC`, spaceID)
 	if err != nil {
 		return nil, err
 	}
