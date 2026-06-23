@@ -102,7 +102,7 @@ func (s *authService) Register(ctx context.Context, name, email, password string
 	_ = s.emailSender.Send(
 		email,
 		"Подтвердите email",
-		fmt.Sprintf("Ссылка: https://app.nerion.ru/auth/verify?token=%s", rawHex),
+		fmt.Sprintf("Ссылка: https://nerionapp.ru/auth/verify?token=%s", rawHex),
 	)
 	return user, nil
 }
@@ -223,7 +223,7 @@ func (s *authService) RequestPasswordReset(ctx context.Context, email string) er
 	_ = s.emailSender.Send(
 		email,
 		"Сброс пароля",
-		fmt.Sprintf("Ссылка: https://app.nerion.ru/auth/password/reset?token=%s", rawHex),
+		fmt.Sprintf("Ссылка: https://nerionapp.ru/auth/password/reset?token=%s", rawHex),
 	)
 	return nil
 }
