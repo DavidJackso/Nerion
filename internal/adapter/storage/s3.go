@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -19,9 +20,11 @@ type S3Adapter struct {
 }
 
 func NewS3Adapter(cfg config.StorageConfig) (domain.StorageAdapter, error) {
-	client, err := minio.New(cfg.S3Endpoint, &minio.Options{
+	endpoint := strings.TrimPrefix(strings.TrimPrefix(cfg.S3Endpoint, "https://"), "http://")
+	secure := !strings.HasPrefix(cfg.S3Endpoint, "http://")
+	client, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.S3AccessKey, cfg.S3SecretKey, ""),
-		Secure: true,
+		Secure: secure,
 		Region: cfg.S3Region,
 	})
 	if err != nil {
