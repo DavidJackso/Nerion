@@ -9,12 +9,12 @@ services:
     volumes:
       - uploads:/app/uploads
 
-volumes:
-  uploads:
-
   migrate:
     image: ${NERION_IMAGE:-ghcr.io/change-me/nerion:latest}
     env_file:
       - .env
     command: ["./migrate"]
     profiles: ["migrate"]
+
+volumes:
+  uploads:
