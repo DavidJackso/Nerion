@@ -16,6 +16,7 @@ const (
 	FieldTypePhone    FieldType = "phone"
 	FieldTypeURL      FieldType = "url"
 	FieldTypeFile     FieldType = "file"
+	FieldTypeFiles    FieldType = "files"
 	FieldTypeRelation FieldType = "relation"
 )
 

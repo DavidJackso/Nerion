@@ -170,7 +170,7 @@ func (e *DDLExecutor) fieldTypeToPG(ft entity.FieldType) string {
 		return "TIMESTAMPTZ"
 	case entity.FieldTypeRelation:
 		return "BIGINT"
-	case entity.FieldTypeLongtext:
+	case entity.FieldTypeLongtext, entity.FieldTypeFiles:
 		return "TEXT"
 	default:
 		return "TEXT"
