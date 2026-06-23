@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	chimw "github.com/go-chi/chi/v5/middleware"
 
 	authmw "nerion/internal/middleware"
 )
@@ -44,20 +45,48 @@ func (s *Server) fileRoutes() chi.Router {
 }
 
 func (s *Server) uploadFile(w http.ResponseWriter, r *http.Request) {
+	reqID := chimw.GetReqID(r.Context())
+
+	s.logger.Info("uploadFile: request received",
+		"request_id", reqID,
+		"remote_addr", r.RemoteAddr,
+		"content_length", r.ContentLength,
+	)
+
 	r.Body = http.MaxBytesReader(w, r.Body, maxFileSize+1<<20)
 	if err := r.ParseMultipartForm(maxFileSize); err != nil {
+		s.logger.Warn("uploadFile: failed to parse multipart form",
+			"request_id", reqID,
+			"err", err,
+		)
 		writeJSON(w, http.StatusBadRequest, errBody("bad_request", "Файл слишком большой или некорректный запрос"))
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
+		s.logger.Warn("uploadFile: file field missing in form",
+			"request_id", reqID,
+			"err", err,
+		)
 		writeJSON(w, http.StatusBadRequest, errBody("bad_request", "Файл не найден в запросе"))
 		return
 	}
 	defer file.Close()
 
+	s.logger.Debug("uploadFile: file received",
+		"request_id", reqID,
+		"filename", header.Filename,
+		"declared_size", header.Size,
+	)
+
 	if header.Size > maxFileSize {
+		s.logger.Warn("uploadFile: file exceeds size limit",
+			"request_id", reqID,
+			"filename", header.Filename,
+			"size", header.Size,
+			"max_size", maxFileSize,
+		)
 		writeJSON(w, http.StatusRequestEntityTooLarge, errBody("file_too_large", "Файл превышает 50 МБ"))
 		return
 	}
@@ -67,7 +96,18 @@ func (s *Server) uploadFile(w http.ResponseWriter, r *http.Request) {
 	n, _ := file.Read(buf)
 	contentType := http.DetectContentType(buf[:n])
 
+	s.logger.Debug("uploadFile: content type detected",
+		"request_id", reqID,
+		"filename", header.Filename,
+		"content_type", contentType,
+	)
+
 	if !allowedContentTypes[contentType] {
+		s.logger.Warn("uploadFile: rejected — content type not allowed",
+			"request_id", reqID,
+			"filename", header.Filename,
+			"content_type", contentType,
+		)
 		writeJSON(w, http.StatusBadRequest, errBody("invalid_file_type",
 			fmt.Sprintf("Тип файла не разрешён: %s", contentType)))
 		return
@@ -88,17 +128,53 @@ func (s *Server) uploadFile(w http.ResponseWriter, r *http.Request) {
 		ext,
 	)
 
+	s.logger.Info("uploadFile: uploading to storage",
+		"request_id", reqID,
+		"space", space.Slug,
+		"key", key,
+		"filename", header.Filename,
+		"size", header.Size,
+		"content_type", contentType,
+	)
+
 	if err := s.storage.Upload(r.Context(), key, data, header.Size, contentType); err != nil {
+		s.logger.Error("uploadFile: storage upload failed",
+			"request_id", reqID,
+			"space", space.Slug,
+			"key", key,
+			"size", header.Size,
+			"err", err,
+		)
 		s.writeError(w, r, err)
 		return
 	}
 
 	ttl := s.presignTTL
+
+	s.logger.Debug("uploadFile: generating presigned URL",
+		"request_id", reqID,
+		"key", key,
+		"ttl", ttl,
+	)
+
 	url, err := s.storage.PresignedURL(r.Context(), key, ttl)
 	if err != nil {
+		s.logger.Error("uploadFile: presign failed",
+			"request_id", reqID,
+			"key", key,
+			"err", err,
+		)
 		s.writeError(w, r, err)
 		return
 	}
+
+	s.logger.Info("uploadFile: success",
+		"request_id", reqID,
+		"space", space.Slug,
+		"key", key,
+		"size", header.Size,
+		"content_type", contentType,
+	)
 
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"key":          key,
