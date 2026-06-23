@@ -12,6 +12,7 @@ WORKDIR /app
 COPY --from=builder /app/server .
 COPY --from=builder /app/migrate .
 COPY --from=builder /app/migrations ./migrations
+RUN mkdir -p /app/uploads && chown nerion:nerion /app/uploads
 USER nerion
 EXPOSE 8080
 CMD ["./server"]

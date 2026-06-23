@@ -6,6 +6,11 @@ services:
       - "127.0.0.1:8080:8080"
     env_file:
       - .env
+    volumes:
+      - uploads:/app/uploads
+
+volumes:
+  uploads:
 
   migrate:
     image: ${NERION_IMAGE:-ghcr.io/change-me/nerion:latest}
