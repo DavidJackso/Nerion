@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -22,6 +23,35 @@ func NewRecordRepository(pool *pgxpool.Pool) domain.RecordRepository {
 
 func recQualifiedTable(spaceSlug, tableSlug string) string {
 	return fmt.Sprintf("%q.%q", "space_"+spaceSlug, tableSlug)
+}
+
+// coerceWriteValue serializes slice values for files fields to a JSON string.
+func coerceWriteValue(f *entity.FieldMeta, val any) (any, error) {
+	if f.Type == entity.FieldTypeFiles {
+		b, err := json.Marshal(val)
+		if err != nil {
+			return nil, fmt.Errorf("files field %q: %w", f.Slug, err)
+		}
+		return string(b), nil
+	}
+	return val, nil
+}
+
+// applyReadCoercions deserializes files fields from JSON string back to []any.
+func applyReadCoercions(rec map[string]any, fields []*entity.FieldMeta) {
+	for _, f := range fields {
+		if f.Type != entity.FieldTypeFiles {
+			continue
+		}
+		s, ok := rec[f.Slug].(string)
+		if !ok || s == "" {
+			continue
+		}
+		var arr []any
+		if err := json.Unmarshal([]byte(s), &arr); err == nil {
+			rec[f.Slug] = arr
+		}
+	}
 }
 
 // buildSelectExprs returns the SELECT expression list for a records query.
@@ -122,6 +152,7 @@ func (r *recordRepository) List(ctx context.Context, spaceSlug, tableSlug string
 		for i, fd := range fds {
 			rec[fd.Name] = vals[i]
 		}
+		applyReadCoercions(rec, fields)
 		records = append(records, rec)
 	}
 	return records, total, rows.Err()
@@ -150,6 +181,7 @@ func (r *recordRepository) GetByID(ctx context.Context, spaceSlug, tableSlug str
 	for i, fd := range fds {
 		rec[fd.Name] = vals[i]
 	}
+	applyReadCoercions(rec, fields)
 	return rec, rows.Err()
 }
 
@@ -169,6 +201,10 @@ func (r *recordRepository) Create(ctx context.Context, spaceSlug, tableSlug stri
 		}
 		if s, isStr := val.(string); isStr && s == "" {
 			continue
+		}
+		val, err := coerceWriteValue(f, val)
+		if err != nil {
+			return nil, err
 		}
 		cols = append(cols, fmt.Sprintf("%q", f.Slug))
 		placeholders = append(placeholders, fmt.Sprintf("$%d", argN))
@@ -210,6 +246,7 @@ func (r *recordRepository) Create(ctx context.Context, spaceSlug, tableSlug stri
 	for i, fd := range fds {
 		rec[fd.Name] = vals[i]
 	}
+	applyReadCoercions(rec, fields)
 	return rec, rows.Err()
 }
 
@@ -217,21 +254,26 @@ func (r *recordRepository) Update(ctx context.Context, spaceSlug, tableSlug stri
 	tbl := recQualifiedTable(spaceSlug, tableSlug)
 	selectExprs := buildSelectExprs(fields)
 
-	fieldBySlug := make(map[string]struct{}, len(fields))
-	for _, f := range fields {
-		fieldBySlug[f.Slug] = struct{}{}
-	}
-
 	var setClauses []string
 	var args []any
 	argN := 1
 
+	fieldByMeta := make(map[string]*entity.FieldMeta, len(fields))
+	for _, f := range fields {
+		fieldByMeta[f.Slug] = f
+	}
+
 	for slug, val := range data {
-		if _, ok := fieldBySlug[slug]; !ok {
+		f, ok := fieldByMeta[slug]
+		if !ok {
 			continue
 		}
 		if s, isStr := val.(string); isStr && s == "" {
 			continue
+		}
+		val, err := coerceWriteValue(f, val)
+		if err != nil {
+			return nil, err
 		}
 		setClauses = append(setClauses, fmt.Sprintf("%q = $%d", slug, argN))
 		args = append(args, val)
@@ -271,6 +313,7 @@ func (r *recordRepository) Update(ctx context.Context, spaceSlug, tableSlug stri
 	for i, fd := range fds {
 		rec[fd.Name] = vals[i]
 	}
+	applyReadCoercions(rec, fields)
 	return rec, rows.Err()
 }
 
