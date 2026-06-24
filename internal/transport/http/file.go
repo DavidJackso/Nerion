@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -220,7 +221,7 @@ func sanitizeFilename(name string) string {
 	for _, r := range name {
 		if r == ' ' {
 			sb.WriteRune('_')
-		} else if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
+		} else if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' {
 			sb.WriteRune(r)
 		}
 	}
