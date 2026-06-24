@@ -49,6 +49,18 @@ func (r *tableRepository) GetBySlug(ctx context.Context, spaceID int64, slug str
 	return t, err
 }
 
+func (r *tableRepository) GetByID(ctx context.Context, id int64) (*entity.TableMeta, error) {
+	t := &entity.TableMeta{}
+	err := r.pool.QueryRow(ctx,
+		`SELECT id, space_id, name, slug, created_at FROM table_meta WHERE id = $1`,
+		id,
+	).Scan(&t.ID, &t.SpaceID, &t.Name, &t.Slug, &t.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apierrors.ErrNotFound
+	}
+	return t, err
+}
+
 func (r *tableRepository) ListBySpace(ctx context.Context, spaceID int64) ([]*entity.TableMeta, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT id, space_id, name, slug, created_at FROM table_meta WHERE space_id = $1 ORDER BY created_at`,

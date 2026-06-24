@@ -9,6 +9,7 @@ import (
 type TableRepository interface {
 	Create(ctx context.Context, t *entity.TableMeta) error
 	GetBySlug(ctx context.Context, spaceID int64, slug string) (*entity.TableMeta, error)
+	GetByID(ctx context.Context, id int64) (*entity.TableMeta, error)
 	ListBySpace(ctx context.Context, spaceID int64) ([]*entity.TableMeta, error)
 	Delete(ctx context.Context, id int64) error
 }

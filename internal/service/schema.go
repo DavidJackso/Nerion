@@ -69,6 +69,13 @@ func (s *schemaService) GetTable(ctx context.Context, spaceSlug, tableSlug strin
 	if err != nil {
 		return nil, err
 	}
+	for _, f := range fields {
+		if f.Type == entity.FieldTypeRelation && f.RelationTableID != nil {
+			if target, err := s.tableRepo.GetByID(ctx, *f.RelationTableID); err == nil && target.SpaceID == space.ID {
+				f.RelationTarget = &target.Slug
+			}
+		}
+	}
 	t.Fields = fields
 	return t, nil
 }
@@ -135,6 +142,29 @@ func (s *schemaService) UpdateFields(ctx context.Context, spaceSlug, tableSlug s
 			return apierrors.NewValidationError(map[string]string{
 				"slug": "Slug поля: строчные латинские буквы, цифры, дефис или подчёркивание (2–64 символа), начало — буква",
 			})
+		}
+		if f.Type == entity.FieldTypeRelation {
+			if f.RelationTableID == nil && (f.RelationTarget == nil || *f.RelationTarget == "") {
+				return apierrors.NewValidationError(map[string]string{
+					f.Slug: "Поле типа 'relation' должно ссылаться на таблицу",
+				})
+			}
+			if f.RelationTableID == nil && f.RelationTarget != nil && *f.RelationTarget != "" {
+				target, err := s.tableRepo.GetBySlug(ctx, space.ID, *f.RelationTarget)
+				if err != nil {
+					return apierrors.NewValidationError(map[string]string{
+						f.Slug: "Целевая таблица не найдена: " + *f.RelationTarget,
+					})
+				}
+				f.RelationTableID = &target.ID
+			} else if f.RelationTableID != nil {
+				target, err := s.tableRepo.GetByID(ctx, *f.RelationTableID)
+				if err != nil || target.SpaceID != space.ID {
+					return apierrors.NewValidationError(map[string]string{
+						f.Slug: "Целевая таблица не найдена",
+					})
+				}
+			}
 		}
 	}
 

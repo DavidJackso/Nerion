@@ -127,6 +127,7 @@ func (s *Server) updateFields(w http.ResponseWriter, r *http.Request) {
 			EnumValues:          f.EnumValues,
 			RelationTableID:     f.RelationTableID,
 			RelationCardinality: f.RelationCardinality,
+			RelationTarget:      f.RelationTarget,
 		}
 	}
 

@@ -41,5 +41,6 @@ type FieldMeta struct {
 	EnumValues          []string   `json:"enum_values,omitempty"`
 	RelationTableID     *int64     `json:"relation_table_id,omitempty"`
 	RelationCardinality *string    `json:"relation_cardinality,omitempty"`
+	RelationTarget      *string    `json:"relation_target,omitempty"`
 	Position            int        `json:"position"`
 }
