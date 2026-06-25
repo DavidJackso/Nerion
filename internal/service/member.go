@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"nerion/internal/domain"
@@ -110,6 +111,13 @@ func (s *spaceMemberService) AcceptInvite(ctx context.Context, token string, use
 	inv, err := s.GetInviteInfo(ctx, token)
 	if err != nil {
 		return err
+	}
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !strings.EqualFold(user.Email, inv.Email) {
+		return apierrors.ErrForbidden
 	}
 	if err := s.memberRepo.Add(ctx, &entity.SpaceMember{
 		SpaceID: inv.SpaceID,
