@@ -41,11 +41,15 @@ type apiKeyCreateResponse struct {
 }
 
 func toAPIKeyResponse(k *entity.APIKey) apiKeyResponse {
+	scope := k.Scope
+	if scope == "read_write" {
+		scope = "write"
+	}
 	return apiKeyResponse{
 		ID:         k.ID,
 		Name:       k.Name,
 		Prefix:     k.KeyPrefix,
-		Scope:      k.Scope,
+		Scope:      scope,
 		Status:     k.Status(),
 		CreatedAt:  k.CreatedAt,
 		LastUsedAt: k.LastUsedAt,

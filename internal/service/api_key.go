@@ -65,8 +65,8 @@ func (s *apiKeyService) Create(ctx context.Context, spaceSlug, name, scope strin
 	if name == "" {
 		return nil, "", apierrors.NewValidationError(map[string]string{"name": "Обязательное поле"})
 	}
-	if scope != "read" && scope != "write" {
-		scope = "write"
+	if scope != "read" {
+		scope = "read_write"
 	}
 
 	space, err := s.requireAdmin(ctx, spaceSlug, userID)
