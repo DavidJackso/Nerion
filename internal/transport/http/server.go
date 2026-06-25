@@ -121,6 +121,7 @@ func (s *Server) registerRoutes() {
 		r.Mount("/spaces/{slug}/files", s.fileRoutes())
 		r.Mount("/spaces/{slug}/audit", s.auditRoutes())
 		r.Mount("/lists", s.publicListRoutes())
+		r.Mount("/invites", s.inviteRoutes())
 
 		r.Group(func(r chi.Router) {
 			r.Use(authmw.Auth(s.jwtManager))

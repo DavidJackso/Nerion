@@ -100,6 +100,14 @@ type memberResponse struct {
 	Role      string `json:"role"`
 }
 
+// Invite
+
+type inviteInfoResponse struct {
+	SpaceID   int64  `json:"space_id"`
+	SpaceName string `json:"space_name"`
+	Email     string `json:"email"`
+}
+
 // Schema
 
 type createTableRequest struct {

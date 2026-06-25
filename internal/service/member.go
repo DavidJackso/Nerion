@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"log/slog"
+	"time"
 
 	"nerion/internal/domain"
 	"nerion/internal/entity"
@@ -13,6 +16,7 @@ import (
 type spaceMemberService struct {
 	memberRepo domain.SpaceMemberRepository
 	userRepo   domain.UserRepository
+	inviteRepo domain.SpaceInvitationRepository
 	emailSend  domain.EmailSender
 	logger     *slog.Logger
 }
@@ -20,12 +24,14 @@ type spaceMemberService struct {
 func NewSpaceMemberService(
 	memberRepo domain.SpaceMemberRepository,
 	userRepo domain.UserRepository,
+	inviteRepo domain.SpaceInvitationRepository,
 	emailSend domain.EmailSender,
 	logger *slog.Logger,
 ) domain.SpaceMemberService {
 	return &spaceMemberService{
 		memberRepo: memberRepo,
 		userRepo:   userRepo,
+		inviteRepo: inviteRepo,
 		emailSend:  emailSend,
 		logger:     logger,
 	}
@@ -50,14 +56,28 @@ func (s *spaceMemberService) Invite(ctx context.Context, spaceID, inviterID int6
 		if !errors.Is(err, apierrors.ErrNotFound) {
 			return err
 		}
-		// User doesn't exist — send invitation email (stub)
-		err = s.emailSend.Send(email, "Приглашение в Nerion",
-			"Вас пригласили в пространство. Зарегистрируйтесь на https://nerionapp.ru")
-		if err != nil {
-			s.logger.Error("Failed to send invitation email", "email", email, "error", err)
-			return errors.New("не удалось отправить приглашение")
+		rawHex, raw, genErr := generateRawToken()
+		if genErr != nil {
+			s.logger.Error("generate invite token", "err", genErr)
+			return fmt.Errorf("не удалось создать приглашение")
 		}
-
+		inv := &entity.SpaceInvitation{
+			SpaceID:   spaceID,
+			Email:     email,
+			InvitedBy: inviterID,
+			TokenHash: hashToken(raw),
+			ExpiresAt: time.Now().Add(7 * 24 * time.Hour),
+		}
+		if storeErr := s.inviteRepo.Create(ctx, inv); storeErr != nil {
+			s.logger.Error("store invite", "err", storeErr)
+			return fmt.Errorf("не удалось создать приглашение")
+		}
+		if sendErr := s.emailSend.Send(email, "Приглашение в Nerion",
+			fmt.Sprintf("Вас пригласили в пространство Nerion. Перейдите по ссылке, чтобы принять приглашение: https://nerionapp.ru/invite?token=%s", rawHex),
+		); sendErr != nil {
+			s.logger.Error("send invite email", "email", email, "err", sendErr)
+			return fmt.Errorf("не удалось отправить приглашение")
+		}
 		return nil
 	}
 
@@ -68,12 +88,44 @@ func (s *spaceMemberService) Invite(ctx context.Context, spaceID, inviterID int6
 	})
 }
 
+func (s *spaceMemberService) GetInviteInfo(ctx context.Context, token string) (*entity.SpaceInvitation, error) {
+	raw, err := hex.DecodeString(token)
+	if err != nil {
+		return nil, apierrors.ErrNotFound
+	}
+	inv, err := s.inviteRepo.GetByTokenHash(ctx, hashToken(raw))
+	if err != nil {
+		return nil, err
+	}
+	if time.Now().After(inv.ExpiresAt) {
+		return nil, apierrors.NewValidationError(map[string]string{"token": "Приглашение истекло"})
+	}
+	if inv.UsedAt != nil {
+		return nil, apierrors.NewValidationError(map[string]string{"token": "Приглашение уже использовано"})
+	}
+	return inv, nil
+}
+
+func (s *spaceMemberService) AcceptInvite(ctx context.Context, token string, userID int64) error {
+	inv, err := s.GetInviteInfo(ctx, token)
+	if err != nil {
+		return err
+	}
+	if err := s.memberRepo.Add(ctx, &entity.SpaceMember{
+		SpaceID: inv.SpaceID,
+		UserID:  userID,
+		Role:    entity.SpaceMemberRoleMember,
+	}); err != nil {
+		return err
+	}
+	return s.inviteRepo.MarkUsed(ctx, inv.ID)
+}
+
 func (s *spaceMemberService) ChangeRole(ctx context.Context, spaceID, requesterID, targetUserID int64, role entity.SpaceMemberRole) error {
 	reqRole, err := s.memberRepo.GetRole(ctx, spaceID, requesterID)
 	if err != nil || reqRole != entity.SpaceMemberRoleAdmin {
 		return apierrors.ErrForbidden
 	}
-	// Protect last admin
 	if role != entity.SpaceMemberRoleAdmin {
 		currentRole, _ := s.memberRepo.GetRole(ctx, spaceID, targetUserID)
 		if currentRole == entity.SpaceMemberRoleAdmin {

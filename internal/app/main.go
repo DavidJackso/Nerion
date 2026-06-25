@@ -57,6 +57,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 	listRepo := repository.NewListRepository(pool)
 	pdfRepo := repository.NewPDFRepository(pool)
 	auditRepo := repository.NewAuditRepository(pool)
+	inviteRepo := repository.NewSpaceInvitationRepository(pool)
 	ddl := repository.NewDDLExecutor(pool)
 
 	// Adapters
@@ -91,7 +92,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 	userSvc := service.NewUserService(userRepo, logger)
 	authSvc := service.NewAuthService(userRepo, sessionRepo, emailVerifRepo, pwdResetRepo, jm, emailSender, logger)
 	spaceSvc := service.NewSpaceService(spaceRepo, memberRepo, logger)
-	memberSvc := service.NewSpaceMemberService(memberRepo, userRepo, emailSender, logger)
+	memberSvc := service.NewSpaceMemberService(memberRepo, userRepo, inviteRepo, emailSender, logger)
 	schemaSvc := service.NewSchemaService(spaceRepo, memberRepo, tableRepo, fieldRepo, ddl, logger)
 	recordSvc := service.NewRecordService(spaceRepo, memberRepo, tableRepo, fieldRepo, recordRepo, logger)
 	apiKeySvc := service.NewAPIKeyService(spaceRepo, memberRepo, apiKeyRepo, logger)
