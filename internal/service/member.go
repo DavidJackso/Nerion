@@ -116,7 +116,7 @@ func (s *spaceMemberService) AcceptInvite(ctx context.Context, token string, use
 	if err != nil {
 		return err
 	}
-	if !strings.EqualFold(user.Email, inv.Email) {
+	if !strings.EqualFold(strings.TrimSpace(user.Email), strings.TrimSpace(inv.Email)) {
 		return apierrors.ErrForbidden
 	}
 	if err := s.memberRepo.Add(ctx, &entity.SpaceMember{
